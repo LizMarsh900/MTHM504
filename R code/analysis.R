@@ -99,7 +99,8 @@ d <- d %>%
 # Delete rows with duplicated applications that have no data
 # and the participants that were accepted without application
 # i.e. all the rows that have anything in the comment column (31 participants)
-d <- d %>% filter(is.na(Comment))
+d <- d %>% 
+  filter(is.na(Comment))
 
 # Create birth date quartiles 
 # Q1 - September to November (09-11)
