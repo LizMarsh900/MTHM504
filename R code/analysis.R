@@ -1,3 +1,5 @@
+#### Set-up ####################################################################
+
 # Load required libraries
 library(excel.link)
 library(tidyverse)
@@ -24,7 +26,7 @@ d2 <- xl.read.file("data_postcode_removed.xlsx",
                   xl.sheet = "2022-24 (CLEAN)")
 
 
-#### Wrangling ####
+#### Wrangling #################################################################
 
 # There are two columns both containing LSOA code so delete one
 # Necessary to do this now because `rename` doesn't work otherwise
@@ -102,6 +104,9 @@ d <- d %>%
 d <- d %>% 
   filter(is.na(Comment))
 
+
+#### Birth date quartiles ####
+
 # Create birth date quartiles 
 # Q1 - September to November (09-11)
 # Q2 - December to February (12-02)
@@ -116,3 +121,165 @@ d <- d %>%
       as.numeric(substr(DOB, 1, 2)) %in% c(6, 7, 8)   ~ "4"
     )
   )
+
+
+#### Education/work variable ####
+
+# Wrangling work_education (as of September) variable
+# Drop down menu of options: State school/Independent school/Apprenticeship/
+# Working/Other, where "Other" they wrote a response
+table(d$education_work)
+# Mostly Colleges, a couple of grammar schools, and miscellaneous other stuff
+
+# Create list for the for loop later, can be edited to incorporate more typos
+education_work_list <- c(
+  `State School` = "state school",
+  `Independent School` = "independent school",
+  `Apprenticeship` = "apprenticeship",
+  `Working` = "working",
+  `Grammar School` = "grammar",
+  `College` = "college",
+  `Unknown` = "to be confirmed|unknown",
+  `Academy` = "academy"
+)
+
+# Create default column
+d$education_work_clean <- "Other"
+
+# For loop to create a new variable with cleaned education pathways
+for (e in names(education_work_list)) {
+  pattern <- education_work_list[[e]]
+  d$education_work_clean[
+    d$education_work_clean == "Other" & #only rows labelled other can be updated
+      grepl(pattern, d$education_work, ignore.case = TRUE)
+  ] <- e
+}
+
+# Sanity check
+table(d$education_work_clean)
+# "Other" comprises: church school, BWFC scholarship with education, Free School,
+# Home schooling.
+
+
+#### Religion #####
+
+#Now checking religion
+table(d$religion)
+# Some messiness in terms of people specifying catholicism
+
+# Create a religion list
+religion_list <- c(
+  `Christian` = "catholic|christian"
+)
+
+# Create default column
+d$religion_clean <- d$religion
+
+# For loop to create a new variable with cleaned education pathways
+for (r in names(religion_list)) {
+  pattern <- religion_list[[r]]
+  d$religion_clean[
+      grepl(pattern, d$religion, ignore.case = TRUE)
+  ] <- r
+}
+
+
+#### Qualification pathway ####
+
+# Now checking qualification pathway, options were: BTECs/A Levels/IB/NVQs/
+# Apprenticeship/Other
+table(d$qualification_pathway)
+# lots of GCSEs, some combination qualifications, CTECs, T-levels, undergraduate
+
+# Create list for the for loop later, can be edited to incorporate more typos
+qualification_list <- c(
+  `GCSEs and below` = "GCSE|GSCE|Year 11|Year 9",
+  `Vocational Qualification` = "CTEC|cambridge technical|t[ -]?levels?|dip(loma)?|level [23]|vocational",
+  `Undergraduate` = "undergraduate",
+  `Unknown` = "unknown",
+  `Combined A-Levels and BTECs` = "a[ -]?levels?.*btec|btec.*a[ -]?levels?",
+  `BTECs` = "btec",
+  `A-Levels` = "a[ -]?levels?",
+  `IB` = "International Baccalaureate",
+  `Apprenticeship` = "apprenticeship"
+)
+
+# Create default column
+d$qualification_pathway_clean <- "Other"
+
+# For loop to create a new variable with cleaned education pathways
+for (q in names(qualification_list)) {
+  pattern <- qualification_list[[q]]
+  d$qualification_pathway_clean[
+    d$qualification_pathway_clean == "Other" & #only rows labelled other can be updated
+      grepl(pattern, d$qualification_pathway, ignore.case = TRUE)
+  ] <- q
+}
+
+table(d$qualification_pathway_clean)
+
+
+#### Level of specialisation variable ####
+
+# Level of specialisation variable, based on three y/n questions
+# <=1 low
+# 2 moderate
+# 3 high
+d <- d %>%
+  mutate(
+    yes_count = (main_sport == "Yes") + 
+      (quit_sports == "Yes") + 
+      (months_train8 == "Yes"),
+    specialisation = case_when(
+      yes_count <= 1 ~ "low",
+      yes_count == 2 ~ "moderate",
+      yes_count == 3 ~ "high"
+    )
+  )
+
+
+#### Other sports binary variables ####
+
+# Create binary variables for each extra sport applicants do
+table(d$other_sports)
+
+sports_list <- c(football = "football",
+                 tennis = "tennis",
+                 swimming = "swim",
+                 rugby = "rugby",
+                 athletics = "athletics",
+                 basketball = "basketball",
+                 gymnastics = "gymnastics|trampolining",
+                 badminton = "badminton",
+                 golf = "golf",
+                 squash = "squash",
+                 cricket = "cricket",
+                 hockey = "hockey",
+                 cross_country = "cross country",
+                 climbing = "climbing",
+                 shooting = "shooting",
+                 cycling_biking = "cycl|biking|mtb|bmx",
+                 dance = "dance",
+                 netball = "netball",
+                 volleyball = "volleyball",
+                 motorsports = "karting",
+                 skiing = "skiing",
+                 rounders = "rounders",
+                 horse_riding = "horse riding|show jumping",
+                 lacrosse = "lacrosse",
+                 handball = "handball",
+                 powerlifting = "powerlifting",
+                 martial_arts = "martial arts|karate|kick boxing|pencak silat|Taekwondo|kung fu|judo",
+                 water_sports = "surfing|paddling boarding|sailing|rowing|aquathlon",
+                 fencing = "fencing",
+                 triathlon = "triathlon",
+                 fitness_classes = "fitness classes|yoga|pilates")
+
+for (s in names(sports_list)) {
+  pattern <- sports_list[[s]]
+  d[[s]] <- ifelse(
+    grepl(pattern, d$other_sports, ignore.case = TRUE),
+    1,
+    0
+  )
+}
