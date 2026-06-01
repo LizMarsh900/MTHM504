@@ -1,15 +1,14 @@
 #### Set-up ####################################################################
 
 # Load required libraries
-library(excel.link)
-library(tidyverse)
+library(excel.link) #for loading excel data with password protection
+library(tidyverse) 
 library(dplyr)
+library(mice) #for multiple imputation
+library(broom) #for summarising information into tidy tibbles
 
 # Set working directory  to folder with data - change as necessary
 setwd("C:/Users/Liz/OneDrive - University of Exeter/MSc/Summer Project/data_copy")
-
-# Check this has worked
-getwd()
 
 # Load data and assign to "d"
 # Used excel.link library for this, as it works with password protected documents
@@ -47,62 +46,85 @@ d <- bind_rows(d1, d2)
 # Rename variables to make them more useable
 d <- d %>%
   rename(
-    `ID` = `Unique ID`,
-    `year_group` = `Year Group`,
-    `selected` = `YTP Selected`,
-    `centre_allocated` = `Centre Allocated`,
-    `centre_choice` = `First Choice Regional Centre`,
-    `decimal_age` = `Decimal Age`,
-    `DOB` = `DOB (MM/YYYY)`,
-    `ethnicity` = `Ethnicity:`,
-    `sex` = `Sex:`,
-    `disability` = `Disability:`,
-    `religion` = `Religion:`,
-    `education_work` = `Education/Work As of Sep 21:`,
-    `qualification_pathway` = `What 'qualification pathway' have you enrolled onto as of September 2021?`,
-    `years_competing` = `How many years have you been competing in athletics?`,
-    `main_sport` = `Is athletics your main sport?`,
-    `quit_sports` = `Have you quit other sports to focus on athletics?`,
-    `months_train8` = `Do you train or participate in athletics for more than 8 months a year?`,
-    `other_sports` = `What other sports do you participate in?`,
-    `event_group` = `Event Group:`,
-    `primary_event` = `Primary Event:`,
-    `hours_week` = `How many hours per week do you typically train for your primary event?`,
-    `specialist_support` = `In the past 12-months, have you had access to any specialist sport science support?`,
-    `difficulty_participating` = `In the past 12-months, have you had any difficulty participating in training and/or competition due to a health problem?`,
-    `LSOA_code` = `LSOA code`,
-    `LSOA_name` = `LSOA Name`,
-    `IMD_rank` = `Index of Multiple Deprivation Rank`,
-    `IMD_decile` = `Index of Multiple Deprivation Decile`,
-    `income_rank` = `Income Rank`,
-    `income_decile` = `Income Decile`,
-    `income_score` = `Income Score`,
-    `employment_rank` = `Employment Rank`,
-    `employment_decile` = `Employment Decile`,
-    `employment_score` = `Employment Score`,
-    `education_rank` = `Education and Skills Rank`,
-    `education_decile` = `Education and Skills Decile`,
-    `health_rank` = `Health and Disability Rank`,
-    `health_decile` = `Health and Disability Decile`,
-    `crime_rank` = `Crime Rank`,
-    `crime_decile` = `Crime Decile`,
-    `housing_rank` = `Barriers to Housing and Services Rank`,
-    `housing_decile` = `Barriers to Housing and Services Decile`,
-    `environment_rank` = `Living Environment Rank`,
-    `environment_decile` = `Living Environment Decile`,
-    `IDACI_rank` = `IDACI Rank`,
-    `IDACI_decile` = `IDACI Decile`,
-    `IDACI_score` = `IDACI Score`,
-    `IDAOPI_rank` = `IDAOPI Rank`,
-    `IDAOPI_decile` = `IDAOPI Decile`,
-    `IDAOPI_score` = `IDAOPI Score`,
+    `ID` = "Unique ID",
+    `year_group` = "Year Group",
+    `selected` = "YTP Selected",
+    `centre_allocated` = "Centre Allocated",
+    `centre_choice` = "First Choice Regional Centre",
+    `decimal_age` = "Decimal Age",
+    `DOB` = "DOB (MM/YYYY)",
+    `ethnicity` = "Ethnicity:",
+    `sex` = "Sex:",
+    `disability` = "Disability:",
+    `religion` = "Religion:",
+    `education_work` = "Education/Work As of Sep 21:",
+    `qualification_pathway` = "What 'qualification pathway' have you enrolled onto as of September 2021?",
+    `years_competing` = "How many years have you been competing in athletics?",
+    `main_sport` = "Is athletics your main sport?",
+    `quit_sports` = "Have you quit other sports to focus on athletics?",
+    `months_train8` = "Do you train or participate in athletics for more than 8 months a year?",
+    `other_sports` = "What other sports do you participate in?",
+    `event_group` = "Event Group:",
+    `primary_event` = "Primary Event:",
+    `hours_week` = "How many hours per week do you typically train for your primary event?",
+    `specialist_support` = "In the past 12-months, have you had access to any specialist sport science support?",
+    `difficulty_participating` = "In the past 12-months, have you had any difficulty participating in training and/or competition due to a health problem?",
+    `LSOA_code` = "LSOA code",
+    `LSOA_name` = "LSOA Name",
+    `IMD_rank` = "Index of Multiple Deprivation Rank",
+    `IMD_decile` = "Index of Multiple Deprivation Decile",
+    `income_rank` = "Income Rank",
+    `income_decile` = "Income Decile",
+    `income_score` = "Income Score",
+    `employment_rank` = "Employment Rank",
+    `employment_decile` = "Employment Decile",
+    `employment_score` = "Employment Score",
+    `education_rank` = "Education and Skills Rank",
+    `education_decile` = "Education and Skills Decile",
+    `health_rank` = "Health and Disability Rank",
+    `health_decile` = "Health and Disability Decile",
+    `crime_rank` = "Crime Rank",
+    `crime_decile` = "Crime Decile",
+    `housing_rank` = "Barriers to Housing and Services Rank",
+    `housing_decile` = "Barriers to Housing and Services Decile",
+    `environment_rank` = "Living Environment Rank",
+    `environment_decile` = "Living Environment Decile",
+    `IDACI_rank` = "IDACI Rank",
+    `IDACI_decile` = "IDACI Decile",
+    `IDACI_score` = "IDACI Score",
+    `IDAOPI_rank` = "IDAOPI Rank",
+    `IDAOPI_decile` = "IDAOPI Decile",
+    `IDAOPI_score` = "IDAOPI Score",
   )
 
-# Delete rows with duplicated applications that have no data
-# and the participants that were accepted without application
-# i.e. all the rows that have anything in the comment column (31 participants)
+# Delete rows with duplicated applications that have no data (27 applicants)
+# and the applicants that were accepted without application (3 applicants)
+# and the applicants that had data deleted for "other" reason (1 applicant)
+# i.e. all the rows that have anything in the comment column (31 total)
 d <- d %>% 
   filter(is.na(Comment))
+
+# Convert "Question omitted" into NAs
+vars <- names(d)
+
+d[vars] <- lapply(d[vars], function(x) {
+  x[x %in% c("Question omitted", "")] <- NA
+  x
+})
+
+# Check structure of dataframe
+str(d)
+
+# Lots of variables need to be changed from character to factor
+# Leaving out Id-type variables, and variables I will alter later
+d <- d %>%
+  mutate(across(
+    where(is.character) & !c(ID, LSOA_code, LSOA_name, Comment, DOB,
+                             other_sports, religion, education_work,
+                             qualification_pathway),
+    ~ factor(trimws(.))
+  ))
+
 
 
 #### Birth date quartiles ####
@@ -114,12 +136,15 @@ d <- d %>%
 # Q4 - June to August (06-08)
 d <- d %>%
   mutate(
+    birth_month = as.numeric(substr(DOB, 1, 2)),
+                             
     birth_quarter = case_when(
-      as.numeric(substr(DOB, 1, 2)) %in% c(9, 10, 11) ~ "1",
-      as.numeric(substr(DOB, 1, 2)) %in% c(12, 1, 2)  ~ "2",
-      as.numeric(substr(DOB, 1, 2)) %in% c(3, 4, 5)   ~ "3",
-      as.numeric(substr(DOB, 1, 2)) %in% c(6, 7, 8)   ~ "4"
-    )
+      birth_month %in% c(9, 10, 11) ~ "1",
+      birth_month %in% c(12, 1, 2) ~ "2",
+      birth_month %in% c(3, 4, 5) ~ "3",
+      birth_month %in% c(6, 7, 8) ~ "4"
+    ),
+    birth_quarter = as.factor(birth_quarter)
   )
 
 
@@ -155,6 +180,9 @@ for (e in names(education_work_list)) {
   ] <- e
 }
 
+# Convert to factor
+d$education_work_clean <- as.factor(d$education_work_clean)
+
 # Sanity check
 table(d$education_work_clean)
 # "Other" comprises: church school, BWFC scholarship with education, Free School,
@@ -183,6 +211,9 @@ for (r in names(religion_list)) {
   ] <- r
 }
 
+d$religion_clean <- as.factor(d$religion_clean)
+
+table(d$religion_clean)
 
 #### Qualification pathway ####
 
@@ -194,7 +225,8 @@ table(d$qualification_pathway)
 # Create list for the for loop later, can be edited to incorporate more typos
 qualification_list <- c(
   `GCSEs and below` = "GCSE|GSCE|Year 11|Year 9",
-  `Vocational Qualification` = "CTEC|cambridge technical|t[ -]?levels?|dip(loma)?|level [23]|vocational",
+  `Vocational Qualification` = 
+    "CTEC|cambridge technical|t[ -]?levels?|dip(loma)?|level [23]|vocational",
   `Undergraduate` = "undergraduate",
   `Unknown` = "unknown",
   `Combined A-Levels and BTECs` = "a[ -]?levels?.*btec|btec.*a[ -]?levels?",
@@ -216,7 +248,61 @@ for (q in names(qualification_list)) {
   ] <- q
 }
 
+d$qualification_pathway_clean <- as.factor(d$qualification_pathway_clean)
+
 table(d$qualification_pathway_clean)
+
+
+#### Other sports binary variables ####
+
+# Create binary variables for each extra sport applicants do
+table(d$other_sports)
+
+sports_list <- c(`american_football` = "american football",
+                 `football` = "football",
+                 `tennis` = "tennis",
+                 `swimming` = "swim",
+                 `rugby` = "rugby",
+                 `athletics` = "athletics",
+                 `basketball` = "basketball",
+                 `gymnastics` = "gymnastics|trampolining",
+                 `badminton` = "badminton",
+                 `golf` = "golf",
+                 `squash` = "squash",
+                 `cricket` = "cricket",
+                 `hockey` = "hockey",
+                 `cross_country` = "cross country",
+                 `climbing` = "climbing",
+                 `shooting` = "shooting",
+                 `cycling_biking` = "cycl|biking|mtb|bmx",
+                 `dance` = "dance",
+                 `netball` = "netball",
+                 `volleyball` = "volleyball",
+                 `motorsports` = "karting",
+                 `skiing` = "skiing",
+                 `rounders` = "rounders",
+                 `horse_riding` = "horse riding|show jumping",
+                 `lacrosse` = "lacrosse",
+                 `handball` = "handball",
+                 `powerlifting` = "powerlifting",
+                 `martial_arts` = "martial arts|karate|kick boxing|pencak silat|taekwondo|kung fu|judo",
+                 `water_sports` = "surfing|paddling boarding|sailing|rowing|aquathlon",
+                 `fencing` = "fencing",
+                 `triathlon` = "triathlon",
+                 `fitness_classes` = "fitness classes|yoga|pilates")
+
+for (s in names(sports_list)) {
+  pattern <- sports_list[[s]]
+  d[[s]] <- ifelse(
+    grepl(pattern, d$other_sports, ignore.case = TRUE),
+    1,
+    0
+  )
+}
+
+d[names(sports_list)] <- lapply(d[names(sports_list)], function(x) {
+  factor(x, levels = c(0, 1), labels = c("No", "Yes"))
+})
 
 
 #### Level of specialisation variable ####
@@ -225,6 +311,7 @@ table(d$qualification_pathway_clean)
 # <=1 low
 # 2 moderate
 # 3 high
+# Create a yes count variable, and then a specialisation variable
 d <- d %>%
   mutate(
     yes_count = (main_sport == "Yes") + 
@@ -238,48 +325,40 @@ d <- d %>%
   )
 
 
-#### Other sports binary variables ####
+# first 54 applicants from 2022-24 cohort have missing data for these Qs
+# Use multiple imputation for these
 
-# Create binary variables for each extra sport applicants do
-table(d$other_sports)
+# First check missingness
+sum(is.na(d$main_sport)) #52
+sum(is.na(d$quit_sports)) #52
+sum(is.na(d$months_train8)) #0 - so actually no missing data here
 
-sports_list <- c(football = "football",
-                 tennis = "tennis",
-                 swimming = "swim",
-                 rugby = "rugby",
-                 athletics = "athletics",
-                 basketball = "basketball",
-                 gymnastics = "gymnastics|trampolining",
-                 badminton = "badminton",
-                 golf = "golf",
-                 squash = "squash",
-                 cricket = "cricket",
-                 hockey = "hockey",
-                 cross_country = "cross country",
-                 climbing = "climbing",
-                 shooting = "shooting",
-                 cycling_biking = "cycl|biking|mtb|bmx",
-                 dance = "dance",
-                 netball = "netball",
-                 volleyball = "volleyball",
-                 motorsports = "karting",
-                 skiing = "skiing",
-                 rounders = "rounders",
-                 horse_riding = "horse riding|show jumping",
-                 lacrosse = "lacrosse",
-                 handball = "handball",
-                 powerlifting = "powerlifting",
-                 martial_arts = "martial arts|karate|kick boxing|pencak silat|Taekwondo|kung fu|judo",
-                 water_sports = "surfing|paddling boarding|sailing|rowing|aquathlon",
-                 fencing = "fencing",
-                 triathlon = "triathlon",
-                 fitness_classes = "fitness classes|yoga|pilates")
+method <- make.method(d)
+method[] <- ""
 
-for (s in names(sports_list)) {
-  pattern <- sports_list[[s]]
-  d[[s]] <- ifelse(
-    grepl(pattern, d$other_sports, ignore.case = TRUE),
-    1,
-    0
+method["main_sport"] <- "logreg"
+method["quit_sports"] <- "logreg"
+
+# impute missing data for 3 Qs using mice (best for y/n outcomes-log regression)
+imp <- mice(d,
+            m = 5,
+            method = method,
+            seed = 123)
+
+# Extract imputed datasets
+imp_d <- complete(imp, action = "all")
+
+imp_d <- lapply(imp_d, function(d) {
+  d$specialisation <- with(d,
+                            ifelse(main_sport == "Yes" &
+                                     quit_sports == "Yes" &
+                                     months_train8 == "Yes",
+                                   "High",
+                                   ifelse(main_sport == "Yes",
+                                          "Moderate",
+                                          "Low"))
   )
-}
+  d$specialisation <- factor(df$specialisation,
+                              levels = c("Low", "Moderate", "High"))
+  d
+})
