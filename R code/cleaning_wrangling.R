@@ -321,6 +321,7 @@ d$qualification_pathway_clean <-
 ))
 
 table(d$qualification_pathway_clean)
+# other consists of the BWFC scholarship again
 
 
 #### Other sports binary variables ####

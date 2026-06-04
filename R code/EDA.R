@@ -2,7 +2,6 @@
 library(broom) #for summarising information into tidy tibbles HASNT BEEN USED YET
 library(gtsummary) #for creating tables
 library(ggplot2) #for visualisation
-library(mice) #for multiple imputation
 
 
 #### Exploratory Data Analysis #################################################
@@ -12,6 +11,9 @@ table(d$year_group)
 
 table(d$year_group, d$selected)
 # 240 selected in 2021 (70 not), and 242 in 2022 (138 not)
+
+
+#### Characteristics/demographics tables ####
 
 # Demographics table broken down by year group
 d %>%
@@ -79,6 +81,24 @@ d %>%
       all_categorical() ~ "{n} ({p}%)"
     )
   )
+
+# Event table
+d %>%
+  select(year_group, event_group, primary_event) %>%
+  tbl_summary(
+    by = year_group,
+    label = list(
+      event_group ~ "Event group",
+      primary_event ~ "Primary event"
+    ),
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"
+    )
+  )
+
+
+#### More detailed exploration of decimal age ####
 
 # Further exploration of age
 summary(d$decimal_age)
@@ -148,7 +168,6 @@ d %>%
     plot.title = element_text(hjust = 0.5)
   )
 
-# Visualisation of age distribution all applicants (separate plots for years)
 d %>%
   filter(year_group == "2022-24") %>%
   ggplot(aes(x = decimal_age)) +
@@ -167,46 +186,58 @@ d %>%
   )
 
 
+#### Exploration of deprivation variables ####
+
+# Mostly interested in IMD and IDACI-not particularly interested in sub-scales
+summary(d$IMD_rank)
+
+# Visualisation of distribution of IMD decile
+d %>%
+  filter(year_group == "2021-23") %>%
+ggplot(aes(x = factor(IMD_decile))) +
+  geom_bar(fill = "lightgrey", colour = "black") +
+  labs(
+    x = "IMD Decile",
+    y = "Count",
+    title = "Distribution of IMD Deciles (2021-23)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+d %>%
+  filter(year_group == "2022-24") %>%
+  ggplot(aes(x = factor(IMD_decile))) +
+  geom_bar(fill = "lightgrey", colour = "black") +
+  labs(
+    x = "IMD Decile",
+    y = "Count",
+    title = "Distribution of IMD Deciles (2022-24)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 
 
+# Visualisation of distribution of IDACI deciles
+d %>%
+  filter(year_group == "2021-23") %>%
+  ggplot(aes(x = factor(IDACI_decile))) +
+  geom_bar(fill = "lightgrey", colour = "black") +
+  labs(
+    x = "IDACI Decile",
+    y = "Count",
+    title = "Distribution of IDACI Deciles (2021-23)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 
-#### Multiple Imputation #######################################################
-
-# first 54 applicants from 2022-24 cohort have missing data for these Qs
-# Use multiple imputation for these
-
-# First check missingness
-sum(is.na(d$main_sport)) #52
-sum(is.na(d$quit_sports)) #52
-sum(is.na(d$months_train8)) #0 - so actually no missing data here
-
-method <- make.method(d)
-method[] <- ""
-
-method["main_sport"] <- "logreg"
-method["quit_sports"] <- "logreg"
-
-# impute missing data for 3 Qs using mice (best for y/n outcomes-log regression)
-imp <- mice(d,
-            m = 5,
-            method = method,
-            seed = 123)
-
-# Extract imputed datasets
-imp_d <- complete(imp, action = "all")
-
-# Create specialisation variable in each of the imputed datasets
-imp_d <- lapply(imp_d, function(d) {
-  d$specialisation <- with(d,
-                           ifelse(main_sport == "Yes" &
-                                    quit_sports == "Yes" &
-                                    months_train8 == "Yes",
-                                  "High",
-                                  ifelse(main_sport == "Yes",
-                                         "Moderate",
-                                         "Low"))
-  )
-  d$specialisation <- factor(d$specialisation,
-                             levels = c("Low", "Moderate", "High"))
-  d
-})
+d %>%
+  filter(year_group == "2022-24") %>%
+  ggplot(aes(x = factor(IDACI_decile))) +
+  geom_bar(fill = "lightgrey", colour = "black") +
+  labs(
+    x = "IDACI Decile",
+    y = "Count",
+    title = "Distribution of IDACI Deciles (2022-24)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
