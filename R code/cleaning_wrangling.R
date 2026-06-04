@@ -4,8 +4,7 @@
 library(excel.link) #for loading excel data with password protection
 library(tidyverse) 
 library(dplyr)
-library(mice) #for multiple imputation
-library(broom) #for summarising information into tidy tibbles
+
 
 # Set working directory  to folder with data - change as necessary
 setwd("C:/Users/Liz/OneDrive - University of Exeter/MSc/Summer Project/data_copy")
@@ -68,7 +67,7 @@ d <- d %>%
     `primary_event` = "Primary Event:",
     `hours_week` = "How many hours per week do you typically train for your primary event?",
     `specialist_support` = "In the past 12-months, have you had access to any specialist sport science support?",
-    `difficulty_participating` = "In the past 12-months, have you had any difficulty participating in training and/or competition due to a health problem?",
+    `health_problem` = "In the past 12-months, have you had any difficulty participating in training and/or competition due to a health problem?",
     `LSOA_code` = "LSOA code",
     `LSOA_name` = "LSOA Name",
     `IMD_rank` = "Index of Multiple Deprivation Rank",
@@ -112,19 +111,46 @@ d[vars] <- lapply(d[vars], function(x) {
   x
 })
 
+# The NAs in disability column correspond to no disability so change coding
+d <- d %>%
+  mutate(disability = replace_na(disability, "No"))
+
 # Check structure of dataframe
 str(d)
 
 # Lots of variables need to be changed from character to factor
-# Leaving out Id-type variables, and variables I will alter later
-d <- d %>%
-  mutate(across(
-    where(is.character) & !c(ID, LSOA_code, LSOA_name, Comment, DOB,
-                             other_sports, religion, education_work,
-                             qualification_pathway),
-    ~ factor(trimws(.))
-  ))
+# Leaving out Id-type variables, and variables to be altered later
+# Doing it manually so that the levels are ordered in a more meaningful way
+# mostly making sure numerical things are ordered correctly,
+# otherwise alphabetical and yes-no-unknown ordering
+levels_list <- list(
+  year_group = c("2021-23", "2022-24"),
+  selected = c("Yes", "No"),
+  centre_choice = c("Bath", "Birmingham", "Leeds", "London - East",
+                    "London - West", "Loughborough", "Manchester"),
+  sex = c("Female", "Male", "Prefer not to say"),
+  disability = c("Yes", "No"),
+  years_competing = c("1-2 years", "3-4 years", "5-6 years", "7-8 years",
+                      "9-10 years", "More than 10 years"),
+  main_sport = c("Yes", "No"),
+  quit_sports = c("Yes", "No"),
+  months_train8 = c("Yes", "No"),
+  event_group = c("Combined Events", "Endurance", "Jumps", "Sprints and Hurdles",
+                  "Throws"),
+  primary_event = c("100m", "200m", "300/400m", "800m", "1500m", "3000m",
+                    "5000m", "10000m", "100h", "110h", "400H", "Combined Events", 
+                    "Discus", "Hammer", "High Jump", "Javelin", "Long Jump",
+                    "Pole Vault", "Race Walking" , "Shot", "Steeplechase",
+                    "Triple Jump"),
+  hours_week = c("1-2 hours", "3-4 hours", "5-6 hours", "7-8 hours", 
+                 "9-10 hours", "11-12 hours", "More than 12 hours"),
+  specialist_support = c("Yes", "No"),
+  health_problem = c("Yes", "No", "Don't know")
+)
 
+for (l in names(levels_list)) {
+  d[[l]] <- factor(d[[l]], levels = levels_list[[l]])
+}
 
 
 #### Birth date quartiles ####
@@ -164,8 +190,7 @@ education_work_list <- c(
   `Working` = "working",
   `Grammar School` = "grammar",
   `College` = "college",
-  `Unknown` = "to be confirmed|unknown",
-  `Academy` = "academy"
+  `Unknown` = "to be confirmed|unknown"
 )
 
 # Create default column
@@ -181,12 +206,15 @@ for (e in names(education_work_list)) {
 }
 
 # Convert to factor
-d$education_work_clean <- as.factor(d$education_work_clean)
+d$education_work_clean <- factor(d$education_work_clean, levels = c(
+  "Apprenticeship", "College", "Grammar School", "Independent School",
+  "State School", "Working", "Unknown", "Other"
+))
 
 # Sanity check
 table(d$education_work_clean)
 # "Other" comprises: church school, BWFC scholarship with education, Free School,
-# Home schooling.
+# Home schooling, academies.
 
 
 #### Religion #####
@@ -211,9 +239,46 @@ for (r in names(religion_list)) {
   ] <- r
 }
 
+# Happy for this to just be alphabetical, not going to specify the level order
 d$religion_clean <- as.factor(d$religion_clean)
 
 table(d$religion_clean)
+
+
+#### Ethnicity ####
+
+# Quick check, options were: White / Asian or Asian British /
+# Black or Black British / Mixed / Prefer not to say
+table(d$ethnicity)
+# One person specified "White South African" which should come under "White"
+
+# Create a ethnicity list
+ethnicity_list <- c(
+  `White (English/Welsh/Scottish/Northern Irish/British/Other)` = 
+    "White South African"
+)
+
+# Create default column
+d$ethnicity_clean <- d$ethnicity
+
+# For loop to create a new variable with cleaned education pathways
+for (e in names(ethnicity_list)) {
+  pattern <- ethnicity_list[[e]]
+  d$ethnicity_clean[
+    grepl(pattern, d$ethnicity, ignore.case = TRUE)
+  ] <- e
+}
+
+d$ethnicity_clean <- factor(d$ethnicity_clean, levels = c(
+  "Asian or Asian British (Bangladeshi/Indian/Pakistani/Chinese/Other)",
+  "Black or Black British (African/Caribbean/Other)",
+  "Mixed (White & Black Caribbean/White & Black African/White & Asian/Other)",
+  "White (English/Welsh/Scottish/Northern Irish/British/Other)",
+  "Prefer not to say"
+))
+
+table(d$ethnicity_clean)
+
 
 #### Qualification pathway ####
 
@@ -225,14 +290,14 @@ table(d$qualification_pathway)
 # Create list for the for loop later, can be edited to incorporate more typos
 qualification_list <- c(
   `GCSEs and below` = "GCSE|GSCE|Year 11|Year 9",
-  `Vocational Qualification` = 
+  `Vocational Qualifications` = 
     "CTEC|cambridge technical|t[ -]?levels?|dip(loma)?|level [23]|vocational",
   `Undergraduate` = "undergraduate",
   `Unknown` = "unknown",
   `Combined A-Levels and BTECs` = "a[ -]?levels?.*btec|btec.*a[ -]?levels?",
   `BTECs` = "btec",
   `A-Levels` = "a[ -]?levels?",
-  `IB` = "International Baccalaureate",
+  `International Baccalaureate` = "International Baccalaureate",
   `Apprenticeship` = "apprenticeship"
 )
 
@@ -248,7 +313,12 @@ for (q in names(qualification_list)) {
   ] <- q
 }
 
-d$qualification_pathway_clean <- as.factor(d$qualification_pathway_clean)
+d$qualification_pathway_clean <- 
+  factor(d$qualification_pathway_clean, levels = c(
+  "A-Levels", "Apprenticeship", "BTECs", "Combined A-Levels and BTECs",
+  "GCSEs and below", "International Baccalaureate", "Undergraduate",
+  "Vocational Qualifications", "Unknown", "Other"
+))
 
 table(d$qualification_pathway_clean)
 
@@ -301,7 +371,8 @@ for (s in names(sports_list)) {
 }
 
 d[names(sports_list)] <- lapply(d[names(sports_list)], function(x) {
-  factor(x, levels = c(0, 1), labels = c("No", "Yes"))
+  factor(x, levels = c(1, 0),
+         labels = c("Yes", "No"))
 })
 
 
@@ -318,47 +389,12 @@ d <- d %>%
       (quit_sports == "Yes") + 
       (months_train8 == "Yes"),
     specialisation = case_when(
-      yes_count <= 1 ~ "low",
-      yes_count == 2 ~ "moderate",
-      yes_count == 3 ~ "high"
+      yes_count <= 1 ~ "Low",
+      yes_count == 2 ~ "Moderate",
+      yes_count == 3 ~ "High",
+      TRUE ~ "Unknown"
     )
   )
 
-
-# first 54 applicants from 2022-24 cohort have missing data for these Qs
-# Use multiple imputation for these
-
-# First check missingness
-sum(is.na(d$main_sport)) #52
-sum(is.na(d$quit_sports)) #52
-sum(is.na(d$months_train8)) #0 - so actually no missing data here
-
-method <- make.method(d)
-method[] <- ""
-
-method["main_sport"] <- "logreg"
-method["quit_sports"] <- "logreg"
-
-# impute missing data for 3 Qs using mice (best for y/n outcomes-log regression)
-imp <- mice(d,
-            m = 5,
-            method = method,
-            seed = 123)
-
-# Extract imputed datasets
-imp_d <- complete(imp, action = "all")
-
-imp_d <- lapply(imp_d, function(d) {
-  d$specialisation <- with(d,
-                            ifelse(main_sport == "Yes" &
-                                     quit_sports == "Yes" &
-                                     months_train8 == "Yes",
-                                   "High",
-                                   ifelse(main_sport == "Yes",
-                                          "Moderate",
-                                          "Low"))
-  )
-  d$specialisation <- factor(df$specialisation,
-                              levels = c("Low", "Moderate", "High"))
-  d
-})
+d$specialisation <- factor(d$specialisation,
+                           levels = c("Low", "Moderate", "High", "Unknown"))
