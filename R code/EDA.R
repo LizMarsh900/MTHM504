@@ -185,6 +185,15 @@ d %>%
     plot.title = element_text(hjust = 0.5)
   )
 
+# Want to find out how many applicants were selected AND older than 17
+queries <- filter(
+  d, selected == "Yes" & decimal_age >= 17)
+
+# Any that are younger?
+queries2 <- filter(
+  d, selected == "Yes" & decimal_age <= 15)
+#NONE
+
 
 #### Exploration of deprivation variables ####
 
