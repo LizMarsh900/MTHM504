@@ -103,11 +103,11 @@ d <- d %>%
 d <- d %>% 
   filter(is.na(Comment))
 
-# Convert "Question omitted" into NAs
+# Convert "Question omitted"s and "N/A"s into actual missing values in R
 vars <- names(d)
 
 d[vars] <- lapply(d[vars], function(x) {
-  x[x %in% c("Question omitted", "")] <- NA
+  x[x %in% c("Question omitted", "", "N/A")] <- NA
   x
 })
 
@@ -399,3 +399,16 @@ d <- d %>%
 
 d$specialisation <- factor(d$specialisation,
                            levels = c("Low", "Moderate", "High", "Unknown"))
+
+
+# As per Rob's email, one applicant's ID is incorrect and need to be changed
+# They also should not have a missing value for selected variable
+d$ID[d$ID == "2224-00506-N"] <- "2224-00506-Y"
+d$selected[d$ID == "2224-00506-Y"] <- "Yes"
+
+
+
+
+
+# Save dataframe to save having to run through this every time
+saveRDS(d, "data_clean.rds")
