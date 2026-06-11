@@ -3,6 +3,9 @@ library(broom) #for summarising information into tidy tibbles HASNT BEEN USED YE
 library(gtsummary) #for creating tables
 library(ggplot2) #for visualisation
 
+# Load clean data (if not already loaded)
+d <- readRDS("data_clean.rds")
+
 
 #### Exploratory Data Analysis #################################################
 
