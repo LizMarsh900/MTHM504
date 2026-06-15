@@ -17,6 +17,10 @@ lsoa_ONS <- st_read("LSOA_boundaries/LSOA_2021_EW_BSC_V4.shp")
 
 str(lsoa_ONS)
 
+non_matches <-
+  anti_join(d, lsoa_ONS, by = c("LSOA_code" = "LSOA21CD"))
+
+
 # Slight exploration of LSOA_codes from dataset first
 n_distinct(d$LSOA_code)
 # 660 unique codes, since there are 691 applicants, 31 are from the same area
@@ -172,8 +176,10 @@ lsoa_points_2224 <- lsoa_ONS %>%
 # Checking because the dataframes have gotten smaller
 # This code returns the rows in lsoa_counts_2123 that do not have a match in 
 # the ONS data
-anti_join(lsoa_counts_2123, lsoa_points_2123, by = c("LSOA_code" = "LSOA21CD"))
-anti_join(lsoa_counts_2224, lsoa_points_2224, by = c("LSOA_code" = "LSOA21CD"))
+non_matches_2123 <-
+  anti_join(lsoa_counts_2123, lsoa_points_2123, by = c("LSOA_code" = "LSOA21CD"))
+non_matches_2224 <- 
+  anti_join(lsoa_counts_2224, lsoa_points_2224, by = c("LSOA_code" = "LSOA21CD"))
 
 # Convert to factor since max two people from each LSOA
 lsoa_points_2123$n <- factor(lsoa_points_2123$n)
