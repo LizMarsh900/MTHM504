@@ -27,16 +27,20 @@ imp_d <- complete(imp, action = "all")
 
 # Create specialisation variable in each of the imputed datasets
 imp_d <- lapply(imp_d, function(d) {
-  d$specialisation <- with(d,
-                           ifelse(main_sport == "Yes" &
-                                    quit_sports == "Yes" &
-                                    months_train8 == "Yes",
-                                  "High",
-                                  ifelse(main_sport == "Yes",
-                                         "Moderate",
-                                         "Low"))
+  
+  yes_count <- (d$main_sport == "Yes") +
+    (d$quit_sports == "Yes") +
+    (d$months_train8 == "Yes")
+  
+  d$specialisation <- ifelse(
+    yes_count == 3, "High",
+    ifelse(yes_count == 2, "Moderate", "Low")
   )
-  d$specialisation <- factor(d$specialisation,
-                             levels = c("Low", "Moderate", "High"))
+  
+  d$specialisation <- factor(
+    d$specialisation,
+    levels = c("Low", "Moderate", "High")
+  )
+  
   d
 })
