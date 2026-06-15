@@ -1,1 +1,5 @@
-R code for analysis
+R code used for cleaning and wrangling the data. I used separate scripts for separate aims. These include:
+
+- Cleaning and wrangling file: this gets the data ready to use by neatening it in lots of ways. For example: cleaning variables in which applicants had written responses that differed from the drop-down options, adding new variables such as binary variables for each "other sport" mentioned or level of specialisation, renaming variables, recoding individuals that were entered wrong etc.
+- EDA file: this mostly was used to create demographics tables showing proportions/numbers/averages of each variable. Some graphical exploration of variables too
+- Mapping file: this contains code that was used to create the maps of England showing which LSOA each of the applicants is from. It contains my development in mapping as it was not a familiar technique so I did start reasonably small by first mapping applicants regardless of how many were from an LSOA before moving onto proportions of successful applicants in each LSOA
