@@ -59,7 +59,19 @@ imp_d <- lapply(imp_d, function(d) {
 
 #### Logistic Regression with imputed datasets #################################
 
-m1 <- glm(selected ~ birth_quarter, data = d,
-              family = binomial(link="logit"))
+# Setting reference categories 
+d$specialisation <- relevel(d$ethnicity_clean, 
+                            ref = "White (English/Welsh/Scottish/Northern Irish/British/Other)")
 
-summary(m1)
+# Fitting model using specialisation so applying to each imputation
+fits <- lapply(imp_d, function(d) {
+  glm(selected ~ birth_quarter + specialisation + sex + ethnicity_clean + IMD_decile,
+      family = binomial(link = "logit"),
+      data = subset(d, year_group == "2021-23"))
+})
+
+pooled <- pool(as.mira(fits))
+
+summary(pooled, conf.int = TRUE, exponentiate = TRUE)
+
+
