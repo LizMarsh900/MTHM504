@@ -13,4 +13,4 @@ My area of interest is sociodemographic selection biases so I would ideally like
 
 Currently the main focus is seeming to be relative age effect, which is both highly explored in recent research and a bias that is very interesting to me. Also some focus on geographical representativeness with lots of mapping of applicants and specifically successful applicants.
 
-This repository should contain everything relating to my project, including all code used for results, as well as all my notes, and final write-up (?) but NOT the data for obvious privacy reasons.
+This repository should contain everything relating to my project, including all code used for results, my notes, and final write-up (?) but NOT the data for obvious privacy reasons.
