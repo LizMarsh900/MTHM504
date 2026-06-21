@@ -2,6 +2,7 @@
 library(broom) #for summarising information into tidy tibbles HASNT BEEN USED YET
 library(gtsummary) #for creating tables
 library(ggplot2) #for visualisation
+library(scales)
 
 # Load clean data (if not already loaded)
 d <- readRDS("data_clean.rds")
@@ -253,3 +254,52 @@ d %>%
   ) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5))
+
+
+#### Graphical exploration of birth quarter ####
+
+d %>%
+  filter(year_group == "2021-23") %>%
+  ggplot(aes(x = birth_quarter)) +
+  geom_bar(aes(y = after_stat(prop), group = 1, ), fill = "lightgrey",
+           colour = "black") +
+  scale_y_continuous(labels = percent_format()) +
+  theme_minimal() +
+  labs(
+    x = "Birth quarter",
+    y = "Percentage",
+    title = "Distribution of applicants' birth quarters (2021-23)"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_text(
+    stat = "count",
+    aes(
+      y = after_stat(prop),
+      label = scales::percent(after_stat(prop), accuracy = 0.1),
+      group = 1
+    ),
+    vjust = -0.5
+  )
+
+d %>%
+  filter(year_group == "2022-24") %>%
+  ggplot(aes(x = birth_quarter)) +
+  geom_bar(aes(y = after_stat(prop), group = 1, ), fill = "lightgrey",
+           colour = "black") +
+  scale_y_continuous(labels = percent_format()) +
+  theme_minimal() +
+  labs(
+    x = "Birth quarter",
+    y = "Percentage",
+    title = "Distribution of applicants' birth quarters (2022-24)"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_text(
+    stat = "count",
+    aes(
+      y = after_stat(prop),
+      label = scales::percent(after_stat(prop), accuracy = 0.1),
+      group = 1
+    ),
+    vjust = -0.5
+  )
