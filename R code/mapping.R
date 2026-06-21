@@ -13,12 +13,12 @@ d <- readRDS("data_clean.rds")
 
 # Read in the shapefile downloaded from the ONS, I used the following link:
 # https://geoportal.statistics.gov.uk/datasets/ons::lower-layer-super-output-areas-december-2021-boundaries-ew-bsc-v4-2/about
-lsoa_ONS <- st_read("LSOA_boundaries/LSOA_2021_EW_BSC_V4.shp")
+lsoa_ONS <- st_read("LSOA_boundaries2011/LSOA_2011_EW_BFE_V3.shp")
 
 str(lsoa_ONS)
 
 non_matches <-
-  anti_join(d, lsoa_ONS, by = c("LSOA_code" = "LSOA21CD"))
+  anti_join(d, lsoa_ONS, by = c("LSOA_code" = "LSOA11CD"))
 
 
 # Slight exploration of LSOA_codes from dataset first
@@ -41,14 +41,14 @@ lsoa_counts %>%
 # was no applicant from)
 map_data <- lsoa_ONS %>%
   left_join(lsoa_counts,
-            by = c("LSOA21CD" = "LSOA_code"))
+            by = c("LSOA11CD" = "LSOA_code"))
 
 # Replace missing values
 map_data$n[is.na(map_data$n)] <- 0
 
 
 #### First map attempt ####
-ggplot(map_data) +
+map <- ggplot(map_data) +
   geom_sf(aes(fill = n), colour = NA) +
   scale_fill_viridis_c() +
   theme_void() +
