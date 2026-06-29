@@ -3,6 +3,7 @@ library(broom) #for summarising information into tidy tibbles HASNT BEEN USED YE
 library(gtsummary) #for creating tables
 library(ggplot2) #for visualisation
 library(scales)
+library(tidyverse)
 
 # Load clean data (if not already loaded)
 d <- readRDS("data_clean.rds")
@@ -189,14 +190,7 @@ d %>%
     plot.title = element_text(hjust = 0.5)
   )
 
-# Want to find out how many applicants were selected AND older than 17
-queries <- filter(
-  d, selected == "Yes" & decimal_age >= 17)
 
-# Any that are younger?
-queries2 <- filter(
-  d, selected == "Yes" & decimal_age <= 15)
-#NONE
 
 
 #### Exploration of deprivation variables ####
@@ -302,4 +296,50 @@ d %>%
       group = 1
     ),
     vjust = -0.5
+  )
+
+
+#### Exploration of applicants who aren't within age range #####################
+
+# Want to find out how many applicants were selected AND older than 17
+queries <- filter(
+  d, selected == "Yes" & decimal_age >= 17)
+
+# Any that are too young?
+queries2 <- filter(
+  d, selected == "Yes" & decimal_age <= 15)
+#NONE
+
+# Rob asked how many were NOT selected AND incorrect age
+queries3 <- d %>%
+  filter(
+  selected == "No" & decimal_age >= 17
+)
+
+queries4 <- d %>%
+  filter(
+    decimal_age <= 15
+  )
+
+
+#### Exploration of gender #####################################################
+
+# Table showing gender totals each year, and selection totals
+d %>%
+  group_by(year_group, sex) %>%
+  summarise(
+    Total = n(),
+    Selected = sum(selected == "Yes", na.rm = TRUE),
+    Not_Selected = sum(selected == "No", na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Same but with percentages
+d %>%
+  group_by(year_group, sex) %>%
+  summarise(
+    Total = n(),
+    Selected = sum(selected == "Yes", na.rm = TRUE),
+    Percent_Selected = round(100 * Selected / Total, 1),
+    .groups = "drop"
   )
