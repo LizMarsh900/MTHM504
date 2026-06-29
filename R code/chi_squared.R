@@ -114,3 +114,30 @@ d %>%
     p_value = map_dbl(test, ~ .x$p.value),
     chisq   = map_dbl(test, ~ .x$statistic)
   )
+
+
+#### Gender ####################################################################
+
+# Create table for use in Chi-square test 
+tab <- table(d$sex, d$selected)
+
+# Test whether the sex distribution of selected applicants is same as whole pool
+chisq.test(tab)
+
+# "Prefer not to say" option caused issues in later chi-square test, 
+# Since only 1 applicant has picked it, we'll remove for now
+d2 <- d %>%
+  filter(sex %in% c("Female", "Male")) %>%
+  droplevels()
+
+# Same test as above but broken down by year
+d2 %>%
+  group_by(year_group) %>%
+  summarise(
+    test = list(chisq.test(table(sex, selected)))
+  ) %>%
+  mutate(
+    p_value = map_dbl(test, ~ .x$p.value),
+    chisq   = map_dbl(test, ~ .x$statistic)
+  )
+
