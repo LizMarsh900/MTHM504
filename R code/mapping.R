@@ -4,6 +4,7 @@
 library(sf)
 library(dplyr)
 library(ggplot2)
+library(tidyverse)
 
 # Set working directory  to folder with data - change as necessary
 setwd("C:/Users/Liz/OneDrive - University of Exeter/MSc/Summer Project/data_copy")
@@ -12,14 +13,13 @@ setwd("C:/Users/Liz/OneDrive - University of Exeter/MSc/Summer Project/data_copy
 d <- readRDS("data_clean.rds")
 
 # Read in the shapefile downloaded from the ONS, I used the following link:
-# https://geoportal.statistics.gov.uk/datasets/ons::lower-layer-super-output-areas-december-2021-boundaries-ew-bsc-v4-2/about
-lsoa_ONS <- st_read("LSOA_boundaries2011/LSOA_2011_EW_BFE_V3.shp")
+# https://geoportal.statistics.gov.uk/datasets/f23b8af6504640558a5100dfcd19a7ee_0/explore?location=52.837570%2C-2.489798%2C6
+lsoa_ONS <- st_read("LSOA_boundaries2011/LSOA_2011_EW_BSC_V4.shp")
 
-str(lsoa_ONS)
-
+# Checking to see non-matches in the dataset with the ONS data
 non_matches <-
   anti_join(d, lsoa_ONS, by = c("LSOA_code" = "LSOA11CD"))
-
+# Only 11, comprising islands, france and missing values - 2011 is correct year
 
 # Slight exploration of LSOA_codes from dataset first
 n_distinct(d$LSOA_code)
@@ -48,7 +48,7 @@ map_data$n[is.na(map_data$n)] <- 0
 
 
 #### First map attempt ####
-map <- ggplot(map_data) +
+ggplot(map_data) +
   geom_sf(aes(fill = n), colour = NA) +
   scale_fill_viridis_c() +
   theme_void() +
@@ -60,15 +60,15 @@ map <- ggplot(map_data) +
 # First just creating England map to map onto later
 # Keep only English LSOAs
 england_lsoa <- lsoa_ONS %>%
-  filter(substr(LSOA21CD, 1, 1) == "E")
+  filter(substr(LSOA11CD, 1, 1) == "E")
 
 # Dissolve into a single England polygon
 england <- england_lsoa %>%
   summarise()
 
-# Just making an england and wales map too, see how it looks
+# Making an england and wales map too, see how it looks
 ew_lsoa <- lsoa_ONS %>%
-  filter(substr(LSOA21CD, 1, 1) %in% c("E", "W"))
+  filter(substr(LSOA11CD, 1, 1) %in% c("E", "W"))
 
 england_wales <- ew_lsoa %>%
   summarise()
@@ -81,7 +81,7 @@ participant_lsoas_2123 <- d %>%
 
 # Find them in the ONS data
 selected_lsoas_2123 <- lsoa_ONS %>%
-  filter(LSOA21CD %in% participant_lsoas_2123)
+  filter(LSOA11CD %in% participant_lsoas_2123)
 
 # Find centroids
 lsoa_points_2123 <- st_centroid(selected_lsoas_2123)
@@ -111,12 +111,12 @@ participant_lsoas_2224 <- d %>%
   unique()
 
 selected_lsoas_2224 <- lsoa_ONS %>%
-  filter(LSOA21CD %in% participant_lsoas_2224)
+  filter(LSOA11CD %in% participant_lsoas_2224)
 
 lsoa_points_2224 <- st_centroid(selected_lsoas_2224)
 
 ggplot() +
-  geom_sf(data = england,
+  geom_sf(data = england_wales,
           fill = "white",
           colour = "grey80") +
   geom_sf(data = lsoa_points_2224,
@@ -162,41 +162,25 @@ lsoa_counts_2224 <- d %>%
 lsoa_points_2123 <- lsoa_ONS %>%
   inner_join(
     lsoa_counts_2123,
-    by = c("LSOA21CD" = "LSOA_code")
+    by = c("LSOA11CD" = "LSOA_code")
   ) %>%
   st_centroid()
 
 lsoa_points_2224 <- lsoa_ONS %>%
   inner_join(
     lsoa_counts_2224,
-    by = c("LSOA21CD" = "LSOA_code")
+    by = c("LSOA11CD" = "LSOA_code")
   ) %>%
   st_centroid()
-
-# Checking because the dataframes have gotten smaller
-# This code returns the rows in lsoa_counts_2123 that do not have a match in 
-# the ONS data
-non_matches_2123 <-
-  anti_join(lsoa_counts_2123, lsoa_points_2123, by = c("LSOA_code" = "LSOA21CD"))
-non_matches_2224 <- 
-  anti_join(lsoa_counts_2224, lsoa_points_2224, by = c("LSOA_code" = "LSOA21CD"))
 
 # Convert to factor since max two people from each LSOA
 lsoa_points_2123$n <- factor(lsoa_points_2123$n)
 lsoa_points_2224$n <- factor(lsoa_points_2224$n)
 
 ggplot() +
-  geom_sf(
-    data = england_wales,
-    fill = "white",
-    colour = "grey80"
-  ) +
+  geom_sf(data = england_wales, fill = "white", colour = "grey80") +
   ggtitle("2021-2023 Applicants") +
-  geom_sf(
-    data = lsoa_points_2123,
-    aes(colour = n),
-    size = 2
-  ) +
+  geom_sf(data = lsoa_points_2123, aes(colour = n), size = 2) +
   scale_colour_manual(
     values = c(
       "1" = "#619CFF",
@@ -212,7 +196,6 @@ ggplot() +
       colour = NA
     )
   )
-
 
 ggplot() +
   geom_sf(
@@ -244,7 +227,7 @@ ggplot() +
 
 #### Attempt with success rates ################################################
 
-# Find proportion of succesful applicants in each LSOA code
+# Find proportion of successful applicants in each LSOA code
 lsoa_acceptance_2123 <- d %>%
   filter(year_group == "2021-23") %>%
   group_by(LSOA_code) %>%
@@ -267,14 +250,14 @@ lsoa_acceptance_2224 <- d %>%
 lsoa_points_2123 <- lsoa_ONS %>%
   inner_join(
     lsoa_acceptance_2123,
-    by = c("LSOA21CD" = "LSOA_code")
+    by = c("LSOA11CD" = "LSOA_code")
   ) %>%
   st_centroid()
 
 lsoa_points_2224 <- lsoa_ONS %>%
   inner_join(
     lsoa_acceptance_2224,
-    by = c("LSOA21CD" = "LSOA_code")
+    by = c("LSOA11CD" = "LSOA_code")
   ) %>%
   st_centroid()
 
@@ -329,3 +312,154 @@ ggplot() +
   ) + 
   ggtitle("2022-2024 Applicants") +
   labs(colour = "Acceptance rate")
+
+
+#### Upscaling to local authority district (LAD) ###############################
+
+# Load LSOA to LAD lookup table, obtained from:
+# https://geoportal.statistics.gov.uk/datasets/d382604321554ed49cc15dbc1edb3de3_0/explore
+lookup <- read_csv("LSOA_to_LAD.csv") %>%
+  select(LSOA11CD, LAD11CD, LAD11NM) %>%
+  distinct()
+
+# Load LAD boundary shapefile, obtained from:
+# https://geoportal.statistics.gov.uk/datasets/4710f4b9f8db4a4fa3edff5bc886bccc_0/explore?location=52.837545%2C-2.489845%2C6
+lad_ONS <- st_read("LAD_boundaries/Local_Authority_Districts_December_2011_FCB_EW.shp")
+
+lad_d <- d %>%
+  left_join(
+    lookup,
+    by = c("LSOA_code" = "LSOA11CD")
+  )
+
+# Find proportion of successful applicants in each LAD code
+lad_acceptance_2123 <- lad_d %>%
+  filter(year_group == "2021-23") %>%
+  group_by(LAD11CD) %>%
+  summarise(
+    applicants = n(),
+    accepted = sum(selected == "Yes"),
+    acceptance_rate = accepted / applicants
+  )
+
+lad_acceptance_2224 <- lad_d %>%
+  filter(year_group == "2022-24") %>%
+  group_by(LAD11CD) %>%
+  summarise(
+    applicants = n(),
+    accepted = sum(selected == "Yes"),
+    acceptance_rate = accepted / applicants
+  )
+
+# Join with shapefile
+lad_map2123 <- lad_ONS %>%
+  left_join(lad_acceptance_2123, by = c("lad11cd" = "LAD11CD"))
+
+lad_map2224 <- lad_ONS %>%
+  left_join(lad_acceptance_2224, by = c("lad11cd" = "LAD11CD"))
+
+# Plot map
+ggplot(lad_map2123) +
+  geom_sf(aes(fill = acceptance_rate), color = NA) +
+  scale_fill_viridis_c(option = "D", na.value = "white") +
+  theme_void() +
+  labs(fill = "Acceptance rate") +
+  ggtitle("Local Authority Aceptance Rates for 2021-2023 Applicants") +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.background = element_rect(
+          fill = "grey80",
+          colour = NA
+        ))
+
+ggplot(lad_map2224) +
+  geom_sf(aes(fill = acceptance_rate), color = NA) +
+  scale_fill_viridis_c(option = "D", na.value = "white") +
+  theme_void() +
+  labs(fill = "Acceptance rate") +
+  ggtitle("Local Authority Aceptance Rates for 2022-2024 Applicants") +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.background = element_rect(
+          fill = "grey80",
+          colour = NA
+  ))
+
+
+#### Further upscaling to county/unitary authority district (CTYUA) level ######
+
+# Load LSOA to CTYUA lookup table, obtained from:
+# https://open-geography-portalx-ons.hub.arcgis.com/datasets/6f5221e8123a480883874849ddf5cbd8_0/explore
+lookup2 <- read_csv("LSOA_to_CTYUA.csv") %>%
+  select(LSOA11CD, CTYUA19CD, CTYUA19NM) %>%
+  distinct()
+
+# Load CTYUA boundary shapefile and limiting it to England and Wales, obtained from:
+# https://geoportal.statistics.gov.uk/datasets/b31d8acce5b744c28f29e99a0df46491_0/explore?location=52.961464%2C-2.112839%2C6
+ctyua_ONS <- st_read("CTYUA_boundaries/Counties_and_Unitary_Authorities_December_2019_FCB_UK.shp")  %>%
+  filter(substr(ctyua19cd, 1, 1) %in% c("E", "W"))
+
+# Join data and CTYUA codes
+ctyua_d <- d %>%
+  left_join(
+    lookup2,
+    by = c("LSOA_code" = "LSOA11CD")
+  )
+
+# Find proportion of successful applicants in each LAD code
+ctyua_acceptance_2123 <- ctyua_d %>%
+  filter(year_group == "2021-23") %>%
+  group_by(CTYUA19CD) %>%
+  summarise(
+    applicants = n(),
+    accepted = sum(selected == "Yes"),
+    acceptance_rate = accepted / applicants
+  )
+
+ctyua_acceptance_2224 <- ctyua_d %>%
+  filter(year_group == "2022-24") %>%
+  group_by(CTYUA19CD) %>%
+  summarise(
+    applicants = n(),
+    accepted = sum(selected == "Yes"),
+    acceptance_rate = accepted / applicants
+  )
+
+# Join with shapefile
+ctyua_map2123 <- ctyua_ONS %>%
+  left_join(ctyua_acceptance_2123, by = c("ctyua19cd" = "CTYUA19CD"))
+
+ctyua_map2224 <- ctyua_ONS %>%
+  left_join(ctyua_acceptance_2224, by = c("ctyua19cd" = "CTYUA19CD"))
+
+# Plot map
+ggplot(ctyua_map2123) +
+  geom_sf(aes(fill = acceptance_rate), color = NA) +
+  scale_fill_viridis_c(option = "D", na.value = "white") +
+  theme_void() +
+  labs(fill = "Acceptance rate") +
+  ggtitle("County and Unitary Authority District Rates for 2021-2023 Applicants") +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.background = element_rect(
+          fill = "grey80",
+          colour = NA
+        ))
+
+ggplot(ctyua_map2224) +
+  geom_sf(aes(fill = acceptance_rate), color = NA) +
+  scale_fill_viridis_c(option = "D", na.value = "white") +
+  theme_void() +
+  labs(fill = "Acceptance rate") +
+  ggtitle("County and Unitary Authority District Rates for 2022-2024 Applicants") +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.background = element_rect(
+          fill = "grey80",
+          colour = NA
+        ))
+
+
+#### Checking number of applicants from each LAD/CTYUA #########################
+
+lad_tab <- table(lad_d$LAD11NM)
+table(lad_tab)
+
+ctyua_tab <- table(ctyua_d$CTYUA19NM)
+table(ctyua_tab)
