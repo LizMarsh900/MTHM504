@@ -288,8 +288,8 @@ ggplot() +
       colour = NA
     )
   ) + 
-  ggtitle("2021-2023 Applicants") +
-  labs(colour = "Acceptance rate")
+  ggtitle("Lower-Layer Super Output Area Acceptance Rates \nfor 2021-2023 Applicants") +
+  labs(colour = "Acceptance Rate")
 
 ggplot() +
   geom_sf(
@@ -310,8 +310,8 @@ ggplot() +
       colour = NA
     )
   ) + 
-  ggtitle("2022-2024 Applicants") +
-  labs(colour = "Acceptance rate")
+  ggtitle("Lower-Layer Super Output Area Acceptance Rates \nfor 2022-2024 Applicants") +
+  labs(colour = "Acceptance Rate")
 
 
 #### Upscaling to local authority district (LAD) ###############################
@@ -363,7 +363,7 @@ ggplot(lad_map2123) +
   geom_sf(aes(fill = acceptance_rate), color = NA) +
   scale_fill_viridis_c(option = "D", na.value = "white") +
   theme_void() +
-  labs(fill = "Acceptance rate") +
+  labs(fill = "Acceptance Rate") +
   ggtitle("Local Authority Aceptance Rates for 2021-2023 Applicants") +
   theme(plot.title = element_text(hjust = 0.5),
         plot.background = element_rect(
@@ -375,7 +375,7 @@ ggplot(lad_map2224) +
   geom_sf(aes(fill = acceptance_rate), color = NA) +
   scale_fill_viridis_c(option = "D", na.value = "white") +
   theme_void() +
-  labs(fill = "Acceptance rate") +
+  labs(fill = "Acceptance Rate") +
   ggtitle("Local Authority Aceptance Rates for 2022-2024 Applicants") +
   theme(plot.title = element_text(hjust = 0.5),
         plot.background = element_rect(
@@ -435,8 +435,8 @@ ggplot(ctyua_map2123) +
   geom_sf(aes(fill = acceptance_rate), color = NA) +
   scale_fill_viridis_c(option = "D", na.value = "white") +
   theme_void() +
-  labs(fill = "Acceptance rate") +
-  ggtitle("County and Unitary Authority District Rates for 2021-2023 Applicants") +
+  labs(fill = "Acceptance Rate") +
+  ggtitle("County and Unitary Authority District Acceptance Rates for 2021-2023 Applicants") +
   theme(plot.title = element_text(hjust = 0.5),
         plot.background = element_rect(
           fill = "grey80",
@@ -447,8 +447,8 @@ ggplot(ctyua_map2224) +
   geom_sf(aes(fill = acceptance_rate), color = NA) +
   scale_fill_viridis_c(option = "D", na.value = "white") +
   theme_void() +
-  labs(fill = "Acceptance rate") +
-  ggtitle("County and Unitary Authority District Rates for 2022-2024 Applicants") +
+  labs(fill = "Acceptance Rate") +
+  ggtitle("County and Unitary Authority District Acceptance Rates for 2022-2024 Applicants") +
   theme(plot.title = element_text(hjust = 0.5),
         plot.background = element_rect(
           fill = "grey80",
