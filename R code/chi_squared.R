@@ -8,6 +8,7 @@ setwd("C:/Users/Liz/OneDrive - University of Exeter/MSc/Summer Project/data_copy
 d <- readRDS("data_clean.rds")
 
 # Load .gov data - gives the number of births (in thousands) per year and month
+# See table 2.3 at https://assets.publishing.service.gov.uk/media/5a7c89aae5274a0bb7cb7b1b/9787777148210.pdf
 births <- xl.read.file(".gov_data.xlsx",
                    xl.sheet = "Sheet2")
 
@@ -29,7 +30,7 @@ births <- births %>%
 # Specifically this is comparing birth quarter distributions to 25% for each
 # Would be more accurate to use actual census data for this
 
-# 2021-2023 getting proportions
+# Making table of 2021-23 applicants for chi-square test
 obs2123 <- d %>%
   filter(year_group == "2021-23") %>%
   pull(birth_quarter) %>%
@@ -64,6 +65,7 @@ expected2123 <- births %>%
   ) %>%
   unlist()
 
+# Find proportions
 expected2123 <- expected2123 / sum(expected2123)
 
 # Conduct chi square test
@@ -86,7 +88,6 @@ expected2224 <- births %>%
 
 expected2224 <- expected2224 / sum(expected2224)
 
-# Conduct chi square test
 chi2224 <- chisq.test(obs2224, p = expected2224)
 
 chi2224$observed
