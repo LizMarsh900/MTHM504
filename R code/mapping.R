@@ -5,6 +5,7 @@ library(sf)
 library(dplyr)
 library(ggplot2)
 library(tidyverse)
+library(PostcodesioR) # For getting lat and lon of postcodes
 
 # Set working directory  to folder with data - change as necessary
 setwd("C:/Users/Liz/OneDrive - University of Exeter/MSc/Summer Project/data_copy")
@@ -463,3 +464,45 @@ table(lad_tab)
 
 ctyua_tab <- table(ctyua_d$CTYUA19NM)
 table(ctyua_tab)
+
+
+#### Dropping points for regional hubs #########################################
+
+# Create a tibble with the names and postcodes of hubs
+locations <- tibble(
+  name = c("London East", "London West", "Leeds",
+           "Loughborough", "Birmingham", "Manchester", "Bath"),
+  postcode = c("TW1 4SW", "N9 0AR", "LS6 3QQ",
+               "LE11 3TP", "B15 2TT", "M11 3FF", "BA2 7AY"))
+
+# Use postcode_lookup to obtain lat and lons for each hub and convert to sf point
+points <- locations %>%
+  mutate(pc = map(postcode, postcode_lookup),
+         lon = map_dbl(pc, "longitude"),
+         lat = map_dbl(pc, "latitude")) %>%
+  select(-pc) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+  st_transform(st_crs(lad_map2224))
+
+# Create subsets to be mapped corresponding to hubs available in year 
+points2123 <- points
+points2224 <- points
+points2325 <- points %>%
+  filter(name %in% c("Leeds", "Loughborough", "Birmingham"))
+points2426 <- points %>%
+  filter(name %in% c("London West","Leeds", "Loughborough", "Birmingham"))
+points2527 <- points2426
+
+# Same LAD map as earlier but with all hubs on
+ggplot(lad_map2123) +
+  geom_sf(aes(fill = acceptance_rate), color = NA) +
+  scale_fill_viridis_c(option = "D", na.value = "white") +
+  theme_void() +
+  labs(fill = "Acceptance Rate") +
+  ggtitle("Local Authority Aceptance Rates for 2021-2023 Applicants") +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.background = element_rect(
+          fill = "grey80",
+          colour = NA
+        )) +
+  geom_sf(data = points2123, colour = "red", size = 3)
