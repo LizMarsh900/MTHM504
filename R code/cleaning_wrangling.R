@@ -5,7 +5,6 @@ library(excel.link) #for loading excel data with password protection
 library(tidyverse) 
 library(dplyr)
 
-
 # Set working directory  to folder with data - change as necessary
 setwd("C:/Users/Liz/OneDrive - University of Exeter/MSc/Summer Project/data_copy")
 
@@ -13,7 +12,7 @@ setwd("C:/Users/Liz/OneDrive - University of Exeter/MSc/Summer Project/data_copy
 # Used excel.link library for this, as it works with password protected documents
 # Make sure the Excel file being loaded is NOT open when you run it
 # See notes on coding
-d1 <- xl.read.file("data_postcode_removed.xlsx",
+d1 <- xl.read.file("data_revised_090726.xlsx",
                   password = "Sawe15930",           #OMIT IN WRITE-UP
                   write.res.password = "Sawe15930",
                   xl.sheet = "2021-23 (CLEAN)")
@@ -49,6 +48,7 @@ d <- d %>%
     `year_group` = "Year Group",
     `selected` = "YTP Selected",
     `centre_allocated` = "Centre Allocated",
+    `centre_postcode` = "Centre Postcode",
     `centre_choice` = "First Choice Regional Centre",
     `decimal_age` = "Decimal Age",
     `DOB` = "DOB (MM/YYYY)",
@@ -68,6 +68,7 @@ d <- d %>%
     `hours_week` = "How many hours per week do you typically train for your primary event?",
     `specialist_support` = "In the past 12-months, have you had access to any specialist sport science support?",
     `health_problem` = "In the past 12-months, have you had any difficulty participating in training and/or competition due to a health problem?",
+    `future_involvement` = "Future Pathway Involvement",
     `LSOA_code` = "LSOA code",
     `LSOA_name` = "LSOA Name",
     `IMD_rank` = "Index of Multiple Deprivation Rank",
@@ -99,9 +100,10 @@ d <- d %>%
 # Delete rows with duplicated applications that have no data (27 applicants)
 # and the applicants that were accepted without application (3 applicants)
 # and the applicants that had data deleted for "other" reason (1 applicant)
-# i.e. all the rows that have anything in the comment column (31 total)
+# Find these using the comment column
 d <- d %>% 
-  filter(is.na(Comment))
+  filter(!grepl("deleted|Accepted without application", Comment,
+                ignore.case = TRUE))
 
 # Convert "Question omitted"s and "N/A"s into actual missing values in R
 vars <- names(d)
@@ -112,8 +114,10 @@ d[vars] <- lapply(d[vars], function(x) {
 })
 
 # The NAs in disability column correspond to no disability so change coding
+# Same with future involvement variable
 d <- d %>%
-  mutate(disability = replace_na(disability, "No"))
+  mutate(disability = replace_na(disability, "No"),
+         future_involvement = replace_na(future_involvement, "No"))
 
 # Check structure of dataframe
 str(d)
@@ -126,6 +130,8 @@ str(d)
 levels_list <- list(
   year_group = c("2021-23", "2022-24"),
   selected = c("Yes", "No"),
+  centre_allocated = c("Bath", "Birmingham", "Leeds", "London",
+                       "Loughborough", "Manchester"),
   centre_choice = c("Bath", "Birmingham", "Leeds", "London - East",
                     "London - West", "Loughborough", "Manchester"),
   sex = c("Female", "Male", "Prefer not to say"),
@@ -145,7 +151,8 @@ levels_list <- list(
   hours_week = c("1-2 hours", "3-4 hours", "5-6 hours", "7-8 hours", 
                  "9-10 hours", "11-12 hours", "More than 12 hours"),
   specialist_support = c("Yes", "No"),
-  health_problem = c("Yes", "No", "Don't know")
+  health_problem = c("Yes", "No", "Don't know"),
+  future_involvement = c("Yes", "No")
 )
 
 for (l in names(levels_list)) {
@@ -163,7 +170,6 @@ for (l in names(levels_list)) {
 d <- d %>%
   mutate(
     birth_month = as.numeric(substr(DOB, 1, 2)),
-                             
     birth_quarter = case_when(
       birth_month %in% c(9, 10, 11) ~ "1",
       birth_month %in% c(12, 1, 2) ~ "2",
@@ -411,4 +417,4 @@ d$selected[d$ID == "2224-00506-Y"] <- "Yes"
 
 
 # Save dataframe to save having to run through this every time
-saveRDS(d, "data_clean.rds")
+saveRDS(d, "data_revised_clean.rds")
