@@ -8,16 +8,16 @@ library(dplyr)
 # Set working directory  to folder with data - change as necessary
 setwd("C:/Users/Liz/OneDrive - University of Exeter/MSc/Summer Project/data_copy")
 
-# Load data and assign to "d"
+# Load data and assign to "d1", "d2" based on year group
 # Used excel.link library for this, as it works with password protected documents
 # Make sure the Excel file being loaded is NOT open when you run it
 # See notes on coding
-d1 <- xl.read.file("data_revised_090726.xlsx",
+d1 <- xl.read.file("Data_revised_170726.xlsx",
                   password = "Sawe15930",           #OMIT IN WRITE-UP
                   write.res.password = "Sawe15930",
                   xl.sheet = "2021-23 (CLEAN)")
 
-d2 <- xl.read.file("data_postcode_removed.xlsx",
+d2 <- xl.read.file("Data_revised_170726.xlsx",
                   password = "Sawe15930",
                   write.res.password = "Sawe15930",
                   xl.sheet = "2022-24 (CLEAN)")
@@ -25,20 +25,20 @@ d2 <- xl.read.file("data_postcode_removed.xlsx",
 
 #### Wrangling #################################################################
 
-# There are two columns both containing LSOA code so delete one
-# Necessary to do this now because `rename` doesn't work otherwise
+# There are duplicate columns both containing LSOA code so delete one
+# This is necessary now because `rename` function won't work otherwise
 d1$`LSOA code` <- NULL
 d2$`LSOA code` <- NULL
 
 # Join the data frames to create just one with all application years
-# First change the rename variables that aren't labelled the same
+# First rename variables that aren't labelled the same in each dataset
 d2 <- d2 %>%
   rename(
     `Event Group:` = `Select Your Event Group:`,
     `Education/Work As of Sep 21:` = `As of September 2022, in terms of education/work -  please select which applies to you?`
   )
 
-# Can now bind together
+# Can now bind together to create one big usable dataset with all year groups
 d <- bind_rows(d1, d2)
 
 # Rename variables to make them more useable
@@ -97,23 +97,34 @@ d <- d %>%
     `IDAOPI_score` = "IDAOPI Score",
   )
 
-# Delete rows with duplicated applications that have no data (27 applicants)
-# and the applicants that were accepted without application (3 applicants)
-# and the applicants that had data deleted for "other" reason (1 applicant)
+# Remove rows with deleted data due to both duplicate applications and "other"
+# and the applicants that were accepted without application
 # Find these using the comment column
+# If interested find out how many are being deleted:
+# (Can remove and leave only one letter string to get specific counts)
+d %>%
+  filter(grepl("duplicate|deleted|accepted without application",
+               Comment,
+               ignore.case = TRUE)) %>%
+  nrow()
+
+# Now actually delete these rows
 d <- d %>% 
-  filter(!grepl("deleted|Accepted without application", Comment,
+  filter(!grepl("duplicate|deleted|Accepted without application", Comment,
                 ignore.case = TRUE))
 
 # Convert "Question omitted"s and "N/A"s into actual missing values in R
+# First get column names:
 vars <- names(d)
 
+# Now apply function to each column - function converts specific strings into 
+# null values in R
 d[vars] <- lapply(d[vars], function(x) {
   x[x %in% c("Question omitted", "", "N/A")] <- NA
   x
 })
 
-# The NAs in disability column correspond to no disability so change coding
+# The NAs in disability column correspond to no disability so change this coding
 # Same with future involvement variable
 d <- d %>%
   mutate(disability = replace_na(disability, "No"),
@@ -127,6 +138,7 @@ str(d)
 # Doing it manually so that the levels are ordered in a more meaningful way
 # mostly making sure numerical things are ordered correctly,
 # otherwise alphabetical and yes-no-unknown ordering
+# First create a list with each factor variable and the ordered levels:
 levels_list <- list(
   year_group = c("2021-23", "2022-24"),
   selected = c("Yes", "No"),
@@ -155,6 +167,7 @@ levels_list <- list(
   future_involvement = c("Yes", "No")
 )
 
+# Then apply function (making variables into factors) to the list
 for (l in names(levels_list)) {
   d[[l]] <- factor(d[[l]], levels = levels_list[[l]])
 }
@@ -162,7 +175,7 @@ for (l in names(levels_list)) {
 
 #### Birth date quartiles ####
 
-# Create birth date quartiles 
+# Create birth date quartile variable 
 # Q1 - September to November (09-11)
 # Q2 - December to February (12-02)
 # Q3 - March to May (03-05)
@@ -182,9 +195,10 @@ d <- d %>%
 
 #### Education/work variable ####
 
-# Wrangling work_education (as of September) variable
+# Wrangling work_education variable
 # Drop down menu of options: State school/Independent school/Apprenticeship/
 # Working/Other, where "Other" they wrote a response
+# Check all responses to see what other things people wrote:
 table(d$education_work)
 # Mostly Colleges, a couple of grammar schools, and miscellaneous other stuff
 
@@ -211,13 +225,13 @@ for (e in names(education_work_list)) {
   ] <- e
 }
 
-# Convert to factor
+# Convert to newly cleaned education/work variable into a factor
 d$education_work_clean <- factor(d$education_work_clean, levels = c(
   "Apprenticeship", "College", "Grammar School", "Independent School",
   "State School", "Working", "Unknown", "Other"
 ))
 
-# Sanity check
+# Sanity check - do the clean variable responses look right?
 table(d$education_work_clean)
 # "Other" comprises: church school, BWFC scholarship with education, Free School,
 # Home schooling, academies.
@@ -225,11 +239,12 @@ table(d$education_work_clean)
 
 #### Religion #####
 
-#Now checking religion
+# Now checking religion variable same as education/work variable
+# Check responses:
 table(d$religion)
-# Some messiness in terms of people specifying catholicism
+# Some people specifying Catholicism, which can come under Christianity
 
-# Create a religion list
+# Create a religion list (exact same process as before)
 religion_list <- c(
   `Christian` = "catholic|christian"
 )
@@ -237,7 +252,7 @@ religion_list <- c(
 # Create default column
 d$religion_clean <- d$religion
 
-# For loop to create a new variable with cleaned education pathways
+# For loop to create a new variable with cleaned religions
 for (r in names(religion_list)) {
   pattern <- religion_list[[r]]
   d$religion_clean[
@@ -245,29 +260,31 @@ for (r in names(religion_list)) {
   ] <- r
 }
 
-# Happy for this to just be alphabetical, not going to specify the level order
+# Convert to factor - happy for levels to just be alphabetical
 d$religion_clean <- as.factor(d$religion_clean)
 
+# Sanity check
 table(d$religion_clean)
 
 
 #### Ethnicity ####
 
-# Quick check, options were: White / Asian or Asian British /
-# Black or Black British / Mixed / Prefer not to say
+# Same process again for ethnicity, options were: White/Asian or Asian British
+# Black or Black British/Mixed/Prefer not to say
+# Check responses:
 table(d$ethnicity)
 # One person specified "White South African" which should come under "White"
 
-# Create a ethnicity list
+# Create a ethnicity list (exact same process as before)
 ethnicity_list <- c(
   `White (English/Welsh/Scottish/Northern Irish/British/Other)` = 
     "White South African"
 )
 
-# Create default column
+# Create default column 
 d$ethnicity_clean <- d$ethnicity
 
-# For loop to create a new variable with cleaned education pathways
+# For loop to create a new variable with cleaned ethnicity responses
 for (e in names(ethnicity_list)) {
   pattern <- ethnicity_list[[e]]
   d$ethnicity_clean[
@@ -275,6 +292,7 @@ for (e in names(ethnicity_list)) {
   ] <- e
 }
 
+# Convert to factor - alphabetical but "prefer not to say" at the end
 d$ethnicity_clean <- factor(d$ethnicity_clean, levels = c(
   "Asian or Asian British (Bangladeshi/Indian/Pakistani/Chinese/Other)",
   "Black or Black British (African/Caribbean/Other)",
@@ -283,17 +301,18 @@ d$ethnicity_clean <- factor(d$ethnicity_clean, levels = c(
   "Prefer not to say"
 ))
 
+# Sanity check
 table(d$ethnicity_clean)
 
 
 #### Qualification pathway ####
 
-# Now checking qualification pathway, options were: BTECs/A Levels/IB/NVQs/
+# Same process for qualification pathway, options were: BTECs/A Levels/IB/NVQs/
 # Apprenticeship/Other
 table(d$qualification_pathway)
 # lots of GCSEs, some combination qualifications, CTECs, T-levels, undergraduate
 
-# Create list for the for loop later, can be edited to incorporate more typos
+# Create a qualification list (exact same process as before)
 qualification_list <- c(
   `GCSEs and below` = "GCSE|GSCE|Year 11|Year 9",
   `Vocational Qualifications` = 
@@ -310,7 +329,7 @@ qualification_list <- c(
 # Create default column
 d$qualification_pathway_clean <- "Other"
 
-# For loop to create a new variable with cleaned education pathways
+# For loop to create a new variable with cleaned qualification pathways
 for (q in names(qualification_list)) {
   pattern <- qualification_list[[q]]
   d$qualification_pathway_clean[
@@ -319,6 +338,7 @@ for (q in names(qualification_list)) {
   ] <- q
 }
 
+# Convert to factor - alphabetical order with "unknown" and "other" at end
 d$qualification_pathway_clean <- 
   factor(d$qualification_pathway_clean, levels = c(
   "A-Levels", "Apprenticeship", "BTECs", "Combined A-Levels and BTECs",
@@ -326,15 +346,18 @@ d$qualification_pathway_clean <-
   "Vocational Qualifications", "Unknown", "Other"
 ))
 
+# Sanity check
 table(d$qualification_pathway_clean)
 # other consists of the BWFC scholarship again
 
 
 #### Other sports binary variables ####
 
-# Create binary variables for each extra sport applicants do
+# Need to create binary variables for each extra sport applicants do
+# First check responses:
 table(d$other_sports)
 
+# Create list of sports (can be edited for typos/new responses)
 sports_list <- c(`american_football` = "american football",
                  `football` = "football",
                  `tennis` = "tennis",
@@ -368,6 +391,7 @@ sports_list <- c(`american_football` = "american football",
                  `triathlon` = "triathlon",
                  `fitness_classes` = "fitness classes|yoga|pilates")
 
+# For loop to create binary variables for each item in the sport list
 for (s in names(sports_list)) {
   pattern <- sports_list[[s]]
   d[[s]] <- ifelse(
@@ -377,19 +401,24 @@ for (s in names(sports_list)) {
   )
 }
 
+# Need to convert each new binary variable into a factor
+# Apply factor function to each of the new variables
 d[names(sports_list)] <- lapply(d[names(sports_list)], function(x) {
   factor(x, levels = c(1, 0),
          labels = c("Yes", "No"))
 })
 
+# Sanity check - check that new variables are all factors
+str(d)
+
 
 #### Level of specialisation variable ####
 
-# Level of specialisation variable, based on three y/n questions
+# Create level of specialisation variable, based on three y/n questions
 # <=1 low
 # 2 moderate
 # 3 high
-# Create a yes count variable, and then a specialisation variable
+# Create a variable counting "yes"s, and then a specialisation variable
 d <- d %>%
   mutate(
     yes_count = (main_sport == "Yes") + 
@@ -403,14 +432,10 @@ d <- d %>%
     )
   )
 
+# Convert to factor - fairly obvious ordering here
 d$specialisation <- factor(d$specialisation,
                            levels = c("Low", "Moderate", "High", "Unknown"))
 
-
-# As per Rob's email, one applicant's ID is incorrect and need to be changed
-# They also should not have a missing value for selected variable
-d$ID[d$ID == "2224-00506-N"] <- "2224-00506-Y"
-d$selected[d$ID == "2224-00506-Y"] <- "Yes"
 
 
 
