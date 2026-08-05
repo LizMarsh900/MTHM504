@@ -1,5 +1,5 @@
 # Load required libraries
-library(broom) #for summarising information into tidy tibbles HASNT BEEN USED YET
+library(broom) #for summarising information into tidy tibbles
 library(gtsummary) #for creating tables
 library(ggplot2) #for visualisation
 library(scales)
