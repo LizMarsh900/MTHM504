@@ -131,7 +131,7 @@ lookup <- read_csv("LSOA_to_CTYUA.csv") %>%
 # Load CTYUA boundary shapefile and limiting it to England and Wales, obtained from:
 # https://geoportal.statistics.gov.uk/datasets/b31d8acce5b744c28f29e99a0df46491_0/explore?location=52.961464%2C-2.112839%2C6
 ctyua_ONS <- st_read("CTYUA_boundaries/Counties_and_Unitary_Authorities_December_2019_FCB_UK.shp")  %>%
-  filter(substr(ctyua19cd, 1, 1) %in% c("E", "W"))
+  filter(substr(ctyua19cd, 1, 1) %in% c("E"))
 
 # Join data and CTYUA codes
 ctyua_d <- d %>%
@@ -189,7 +189,7 @@ ggplot(ctyua_map2224) +
           colour = NA))
 
 
-#### Dropping points for regional hubs #########################################
+#### Learning how to drop points for regional hubs #############################
 
 # Create a tibble with the names and postcodes of hubs
 locations <- tibble(
@@ -324,19 +324,12 @@ ctyua_results2123 <- ctyua_ONS %>%
 
 # Plot expected number of applications
 ggplot(ctyua_results2123) +
-  geom_sf(aes(fill = smoothed_applications),
-          colour = NA) +
-  scale_fill_viridis_c(
-    option = "D",
-    na.value = "white"
-  ) +
-  labs(
-    title = "Smoothed application intensity (2021-2023)",
-    subtitle = "Posterior mean from BYM2 model",
-    fill = "Expected\napplications"
-  ) +
+  geom_sf(aes(fill = smoothed_applications), colour = NA) +
+  scale_fill_viridis_c(option = "D", na.value = "white") +
+  labs(title = "Smoothed Expected Application Counts \nfrom BYM2 Model (2021-2023)",
+    fill = "Expected\napplications") +
+  theme_void() +
   theme(plot.title = element_text(hjust = 0.5),
         plot.background = element_rect(
           fill = "grey80",
-          colour = NA
-        ))
+          colour = NA)) 
