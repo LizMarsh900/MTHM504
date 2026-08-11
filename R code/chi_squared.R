@@ -1,6 +1,8 @@
 library(dplyr)
 library(purrr)
 library(excel.link)
+library(flextable)
+library(officer)
 
 # Set working directory  to folder with data - change as necessary
 setwd("C:/Users/Liz/OneDrive - University of Exeter/MSc/Summer Project/data_copy")
@@ -82,3 +84,57 @@ chi2224$observed
 chi2224$expected
 chi2224$residuals
 
+
+#### One chi-square analysis for whole dataset #################################
+
+obs <- d %>%
+  pull(birth_quarter) %>%
+  table()
+
+# Average these census proportions from 2004, 2005, and 2006
+# Create a table of averaged total live births
+expected <- births %>%
+  filter(Year %in% c(2004, 2005, 2006)) %>%
+  summarise(
+    "1" = sum(Q1),
+    "2" = sum(Q2),
+    "3" = sum(Q3),
+    "4" = sum(Q4)
+  ) %>%
+  unlist()
+
+# Find proportions (instead of just counts)
+expected <- expected / sum(expected)
+
+# Conduct chi square test
+chi <- chisq.test(obs, p = expected)
+
+chi2224$observed
+chi2224$expected
+chi2224$residuals
+
+
+
+#### Neat Results tables #######################################################
+
+results <- data.frame(
+  Quarter = names(chi$observed),
+  Observed = as.numeric(chi$observed),
+  Expected = round(as.numeric(chi$expected), 2),
+  Residual = round(as.numeric(chi$residuals), 2)
+)
+
+ft <- flextable(results)
+
+ft <- set_header_labels(
+  ft,
+  Quarter = "Birth quarter",
+  Observed = "Observed",
+  Expected = "Expected",
+  Residual = "Pearson residual"
+)
+
+doc <- read_docx()
+doc <- body_add_flextable(doc, ft)
+
+print(doc, target = "birth_quarter_table.docx")
