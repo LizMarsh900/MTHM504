@@ -8,7 +8,7 @@ library(dplyr)
 # Set working directory  to folder with data - change as necessary
 setwd("C:/Users/Liz/OneDrive - University of Exeter/MSc/Summer Project/data_copy")
 
-# Load data and assign to "d1", "d2" based on year group
+  # Load data and assign to "d1", "d2" based on year group
 # Used excel.link library for this, as it works with password protected documents
 # Make sure the Excel file being loaded is NOT open when you run it
 # See notes on coding
@@ -209,18 +209,17 @@ education_work_list <- c(
   `Apprenticeship` = "apprenticeship",
   `Working` = "working",
   `Grammar School` = "grammar",
-  `College` = "college",
-  `Unknown` = "to be confirmed|unknown"
+  `College` = "college"
 )
 
 # Create default column
-d$education_work_clean <- "Other"
+d$education_work_clean <- "Unknown/Other"
 
 # For loop to create a new variable with cleaned education pathways
 for (e in names(education_work_list)) {
   pattern <- education_work_list[[e]]
   d$education_work_clean[
-    d$education_work_clean == "Other" & #only rows labelled other can be updated
+    d$education_work_clean == "Unknown/Other" & #only rows labelled `Unknown/Other` can be updated
       grepl(pattern, d$education_work, ignore.case = TRUE)
   ] <- e
 }
@@ -228,13 +227,11 @@ for (e in names(education_work_list)) {
 # Convert to newly cleaned education/work variable into a factor
 d$education_work_clean <- factor(d$education_work_clean, levels = c(
   "Apprenticeship", "College", "Grammar School", "Independent School",
-  "State School", "Working", "Unknown", "Other"
+  "State School", "Working", "Unknown/Other"
 ))
 
 # Sanity check - do the clean variable responses look right?
 table(d$education_work_clean)
-# "Other" comprises: church school, BWFC scholarship with education, Free School,
-# Home schooling, academies.
 
 
 #### Religion #####
@@ -318,7 +315,6 @@ qualification_list <- c(
   `Vocational Qualifications` = 
     "CTEC|cambridge technical|t[ -]?levels?|dip(loma)?|level [23]|vocational",
   `Undergraduate` = "undergraduate",
-  `Unknown` = "unknown",
   `Combined A-Levels and BTECs` = "a[ -]?levels?.*btec|btec.*a[ -]?levels?",
   `BTECs` = "btec",
   `A-Levels` = "a[ -]?levels?",
@@ -327,13 +323,13 @@ qualification_list <- c(
 )
 
 # Create default column
-d$qualification_pathway_clean <- "Other"
+d$qualification_pathway_clean <- "Unknown/Other"
 
 # For loop to create a new variable with cleaned qualification pathways
 for (q in names(qualification_list)) {
   pattern <- qualification_list[[q]]
   d$qualification_pathway_clean[
-    d$qualification_pathway_clean == "Other" & #only rows labelled other can be updated
+    d$qualification_pathway_clean == "Unknown/Other" & 
       grepl(pattern, d$qualification_pathway, ignore.case = TRUE)
   ] <- q
 }
@@ -343,7 +339,7 @@ d$qualification_pathway_clean <-
   factor(d$qualification_pathway_clean, levels = c(
   "A-Levels", "Apprenticeship", "BTECs", "Combined A-Levels and BTECs",
   "GCSEs and below", "International Baccalaureate", "Undergraduate",
-  "Vocational Qualifications", "Unknown", "Other"
+  "Vocational Qualifications", "Unknown/Other"
 ))
 
 # Sanity check
