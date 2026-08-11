@@ -4,6 +4,8 @@ library(gtsummary) #for creating tables
 library(ggplot2) #for visualisation
 library(scales)
 library(tidyverse)
+library(flextable)
+library(officer)
 
 # Load clean data (if not already loaded)
 d <- readRDS("data_revised_clean.rds")
@@ -342,4 +344,68 @@ d %>%
     Selected = sum(selected == "Yes", na.rm = TRUE),
     Percent_Selected = round(100 * Selected / Total, 1),
     .groups = "drop"
+  )
+
+
+#### Diss ready stuff ##########################################################
+
+# Statified table broken down by year group and selection
+final_table <- d %>%
+  select(
+    year_group, selected, sex, decimal_age,
+    disability, ethnicity_clean, religion_clean
+  ) %>%
+  tbl_strata(
+    strata = year_group,
+    .tbl_fun = ~ .x %>%
+      tbl_summary(
+        by = selected,
+        label = list(
+          decimal_age ~ "Age (years)",
+          sex ~ "Sex",
+          ethnicity_clean ~ "Ethnicity",
+          disability ~ "Disability",
+          religion_clean ~ "Religion"
+        ),
+        statistic = list(
+          all_continuous() ~ "{mean} ({sd})",
+          all_categorical() ~ "{n} ({p}%)"
+        ),
+        missing = "no"
+      )
+  )
+
+# Export to word
+final_table %>%
+  as_flex_table() %>%
+  save_as_docx(
+    path = "demographic_summary.docx"
+  )
+
+
+# Same with birth quarters table
+birthq_table <- d %>%
+  select(
+    year_group, selected, birth_quarter
+  ) %>%
+  tbl_strata(
+    strata = year_group,
+    .tbl_fun = ~ .x %>%
+      tbl_summary(
+        by = selected,
+        label = list(
+          birth_quarter ~ "Birth Quarter"
+        ),
+        statistic = list(
+          all_continuous() ~ "{mean} ({sd})",
+          all_categorical() ~ "{n} ({p}%)"
+        ),
+        missing = "no"
+      )
+  )
+
+birthq_table %>%
+  as_flex_table() %>%
+  save_as_docx(
+    path = "birthq_summary.docx"
   )
