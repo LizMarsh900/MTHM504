@@ -18,11 +18,11 @@ install.packages("INLA",
                            INLA = "https://inla.r-inla-download.org/R/stable"),
                  dependencies = TRUE)
 
+#####
+
 # Get Times New Roman
 font_add("Times New Roman", regular = "C:/Windows/Fonts/times.ttf")
 showtext_auto()
-
-#####
 
 # Set working directory  to folder with data - change as necessary
 setwd("C:/Users/Liz/OneDrive - University of Exeter/MSc/Summer Project/data_copy")
@@ -33,11 +33,6 @@ d <- readRDS("data_revised_clean.rds")
 # Read in the shapefile downloaded from the ONS, I used the following link:
 # https://geoportal.statistics.gov.uk/datasets/f23b8af6504640558a5100dfcd19a7ee_0/explore?location=52.837570%2C-2.489798%2C6
 lsoa_ONS <- st_read("LSOA_boundaries2011/LSOA_2011_EW_BSC_V4.shp")
-
-# Checking to see non-matches in the dataset with the ONS data
-non_matches <-
-  anti_join(d, lsoa_ONS, by = c("LSOA_code" = "LSOA11CD"))
-# Only 11, comprising islands, france and missing values
 
 # Slight exploration of LSOA_codes from dataset first - how many unique codes:
 n_distinct(d$LSOA_code)
@@ -301,9 +296,10 @@ ggplot() +
         legend.position = "left", legend.box.margin = margin(0, 0, 0, 30)
   )
 
+
 #### SPATIAL SMOOTHING #########################################################
 
-#### First mapping raw application counts ####
+#### First mapping raw application counts for each individual year group ####
 
 # Find number of applications in each CTYUA code (2021-23)
 ctyua_applications_2123 <- ctyua_d %>%
@@ -503,3 +499,6 @@ ggplot(ctyua_results) +
 
 # Find hyperparameters (e.g. overall spatial effect)
 model$summary.hyperpar
+
+# Crude estimate of how many are being missed according to the model
+sum(d_smooth$difference[d_smooth$difference < 0])

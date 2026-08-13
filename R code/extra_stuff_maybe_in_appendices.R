@@ -1,6 +1,11 @@
 #### Mapping learning process ##################################################
 
 
+# Checking to see non-matches in the dataset with the ONS data
+non_matches <-
+  anti_join(d, lsoa_ONS, by = c("LSOA_code" = "LSOA11CD"))
+# Only 11, comprising islands, france and missing values
+
 #### First map attempt ####
 ggplot(map_data) +
   geom_sf(aes(fill = n), colour = NA) +
