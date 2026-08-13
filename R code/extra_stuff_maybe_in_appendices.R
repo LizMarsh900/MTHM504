@@ -236,3 +236,33 @@ ggplot(lad_map2224) +
           fill = "grey80",
           colour = NA
         ))
+
+
+
+
+
+
+
+#### Log regression stuff ######################################################
+
+#### No multiple imputation model (removed specialisation) #####
+
+d_complete <- na.omit(
+  d[, c("selected", "birth_quarter", "year_group", 
+        "sex", "disability","ethnicity_clean", "IMD_decile", "religion_clean",
+        "education_work_clean", "qualification_pathway_clean", 
+        "years_competing", "primary_event", 
+        "hours_week", "specialist_support", "health_problem")]
+)
+
+mod <- glm(selected ~ birth_quarter*year_group + 
+             sex + disability + ethnicity_clean + IMD_decile + religion_clean +
+             education_work_clean + qualification_pathway_clean + 
+             years_competing + primary_event + 
+             hours_week + specialist_support + health_problem,
+           family = binomial(link = "logit"),
+           data = d_complete)
+
+null_mod <- glm(selected ~ 1, family = binomial(link = "logit"), data = d_complete)
+
+anova(null_mod, mod, test = "Chisq")

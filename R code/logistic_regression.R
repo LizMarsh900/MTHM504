@@ -4,6 +4,9 @@ library(tidyverse)
 library(mice) #for multiple imputation
 library(flextable)
 library(officer)
+library(pROC)
+library(performance)
+library(see)
 
 # Set working directory  to folder with data - change as necessary
 setwd("C:/Users/Liz/OneDrive - University of Exeter/MSc/Summer Project/data_copy")
@@ -33,7 +36,7 @@ method["quit_sports"] <- "logreg"
 
 # Impute missing data for the 2 questions using mice
 imp <- mice(d,
-            m = 5,
+            m = 30,
             method = method,
             seed = 123)
 
@@ -77,48 +80,95 @@ fits <- lapply(imp_d, function(d) {
 # Could use multiple imputation for the "don't knows"
 # Same could be done for any "unknown/other" in other variables
 
+# Pool results using Rubin's rules
 pooled <- pool(as.mira(fits))
 
+# Get a summary of pooled results
 results <- summary(pooled, conf.int = TRUE, exponentiate = TRUE)
 
-# Best model according to stepwise selection:
-# selected ~ sex + ethnicity_clean + qualification_pathway_clean + 
-#  years_competing + primary_event + health_problem
 
-#### No multiple imputation model (removed specialisation) #####################
+#### Model checking ############################################################
 
-d_complete <- na.omit(
-  d[, c("selected", "birth_quarter", "year_group", 
-          "sex", "disability","ethnicity_clean", "IMD_decile", "religion_clean",
+# Random selection of the 30 imputed models
+# 29, 24, 1 (from random number generator)
+
+
+# Just creating a complete cases dataset to use for the null model
+d29 <- imp_d[[29]]
+
+d29_complete <- d29[complete.cases(
+  d29[, c("selected", "birth_quarter", "year_group", "sex", "disability", 
+          "ethnicity_clean", "IMD_decile", "religion_clean",
           "education_work_clean", "qualification_pathway_clean", 
-          "years_competing", "primary_event", 
+          "years_competing", "specialisation", "primary_event", 
           "hours_week", "specialist_support", "health_problem")]
-)
+), ]
 
-mod <- glm(selected ~ birth_quarter*year_group + 
-      sex + disability + ethnicity_clean + IMD_decile + religion_clean +
-      education_work_clean + qualification_pathway_clean + 
-      years_competing + primary_event + 
-      hours_week + specialist_support + health_problem,
-    family = binomial(link = "logit"),
-    data = d_complete)
-
-null_mod <- glm(selected ~ 1, family = binomial(link = "logit"), data = d_complete)
-
-anova(null_mod, mod, test = "Chisq")
+# Likelihood-ratio test
+null_model <- glm(selected ~ 1, data = d29_complete, family = binomial)
+anova(null_model, fits[[29]], test = "Chisq")
 
 
-#### Model fit assessment ######################################################
+# same again
+d24 <- imp_d[[24]]
 
-fit_null <- with(
-  imp,
-  glm(selected ~ 1, family = binomial)
-)
+d24_complete <- d24[complete.cases(
+  d24[, c("selected", "birth_quarter", "year_group", "sex", "disability", 
+          "ethnicity_clean", "IMD_decile", "religion_clean",
+          "education_work_clean", "qualification_pathway_clean", 
+          "years_competing", "specialisation", "primary_event", 
+          "hours_week", "specialist_support", "health_problem")]
+), ]
 
-D1(fits, fit_null)
+null_model <- glm(selected ~ 1, data = d24_complete, family = binomial)
+anova(null_model, fits[[24]], test = "Chisq")
 
-#### Neat results ##############################################################
+# same again
+d1 <- imp_d[[21]]
 
+d1_complete <- d1[complete.cases(
+  d1[, c("selected", "birth_quarter", "year_group", "sex", "disability", 
+          "ethnicity_clean", "IMD_decile", "religion_clean",
+          "education_work_clean", "qualification_pathway_clean", 
+          "years_competing", "specialisation", "primary_event", 
+          "hours_week", "specialist_support", "health_problem")]
+), ]
+
+null_model <- glm(selected ~ 1, data = d1_complete, family = binomial)
+anova(null_model, fits[[1]], test = "Chisq")
+
+# Pooled overall model comparison
+null_fits <- lapply(imp_d, function(d) {
+  glm(
+    selected ~ 1,
+    family = binomial,
+    data = d
+  )
+})
+D1(fits, null_fits)
+
+
+# Checking ROC AND AUC for all imputed models
+aucs <- sapply(fits, function(m) {
+  roc(
+    model.response(model.frame(m)),
+    fitted(m),
+    direction = "<"
+  )$auc
+})
+
+aucs
+
+# Overall diagnostic plots
+check_model(fits[[29]])
+check_model(fits[[24]])
+check_model(fits[[1]])
+
+
+#### Neat results for write-up #################################################
+
+# Select only the results for predictors relevant to my project
+# And remove unneccessary columns
 results <- results[results$term %in% c(
   "birth_quarter2",
   "birth_quarter3",
@@ -130,6 +180,7 @@ results <- results[results$term %in% c(
   ),
 ] %>% subset(select = -c(statistic, df, conf.low, conf.high))
 
+# Rename columns
 names(results) <- c(
   "Predictor",
   "OR",
@@ -139,13 +190,15 @@ names(results) <- c(
   "CI_upper"
 )
 
+# Round all the results
 results$OR <- round(results$OR, 2)
 results$SE <- round(results$SE, 2)
 results$CI_lower <- round(results$CI_lower, 2)
 results$CI_upper <- round(results$CI_upper, 2)
 results$p <- round(results$p, 3)
 
-+results$Predictor <- c(
+# Rename predictors so it's clearer in the final table
+results$Predictor <- c(
   "Birth quarter 2",
   "Birth quarter 3",
   "Birth quarter 4",
@@ -155,16 +208,18 @@ results$p <- round(results$p, 3)
   "Birth quarter 4 × year group: 2022–24"
 )
 
+# Combine CIs into one column, with each number having a comma between them
 results$`95% CI` <- paste0(
   results$CI_lower,
   ", ",
   results$CI_upper
 )
-  
+
+# Get rid of CI columns since we have a new one 
 results <- results %>% subset(select = -c(CI_lower, CI_upper))
 
+# Convert to a flextable and create a word document with it in
 ft <- flextable(results)
 doc <- read_docx()
 doc <- body_add_flextable(doc, ft)
-
 print(doc, target = "logreg_table.docx")
